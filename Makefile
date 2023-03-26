@@ -1,8 +1,8 @@
 OS=""
 ARCH=""
 
-.PHONY: build-linux
-build-linux:
+.PHONY: build
+build:
 	export GOPROXY="https://goproxy.io,direct"
 	CGO_ENABLED=1 GOOS=${OS} GOARCH=${ARCH} go build -ldflags "-s -w" -o build/ethevent main.go
 
