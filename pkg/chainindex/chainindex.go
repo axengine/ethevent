@@ -50,9 +50,12 @@ func (ci *ChainIndex) Init() error {
 			var indexCols []string
 			for _, arg := range v.Inputs {
 				var tp string
+				// todo
 				switch arg.Type.T {
-				case abi.BoolTy, abi.IntTy, abi.UintTy:
-					tp = "INTEGER"
+				case abi.IntTy, abi.UintTy:
+					tp = "TEXT"
+				case abi.BoolTy:
+					tp = "BOOLEAN"
 				default:
 					tp = "TEXT"
 				}
@@ -133,23 +136,23 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 
 	var events []Event
 
-	for _, v := range block.Transactions() {
-		if v.To() == nil || v.To().Hex() != common.HexToAddress(t.Contract).String() {
+	for _, tx := range block.Transactions() {
+		if tx.To() == nil || tx.To().Hex() != common.HexToAddress(t.Contract).String() {
 			continue
 		}
 
-		if receipt, err := cli.TransactionReceipt(ctx, v.Hash()); err != nil {
+		if receipt, err := cli.TransactionReceipt(ctx, tx.Hash()); err != nil {
 			return err
 		} else {
 			ins, _ := abi.JSON(strings.NewReader(t.Abi))
-			for _, v := range receipt.Logs {
-				event, err := ins.EventByID(v.Topics[0])
+			for _, rcptLog := range receipt.Logs {
+				event, err := ins.EventByID(rcptLog.Topics[0])
 				if err != nil {
 					continue
 				}
 
-				indexed := v.Topics[1:]
-				unindexed, err := event.Inputs.Unpack(v.Data)
+				indexed := rcptLog.Topics[1:]
+				unindexed, err := event.Inputs.Unpack(rcptLog.Data)
 				if err != nil {
 					return err
 				}
@@ -158,7 +161,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 				{
 					cols = append(cols, database.Feild{
 						Name:  "Address",
-						Value: v.Address.Hex(),
+						Value: rcptLog.Address.Hex(),
 					})
 					//cols = append(cols, database.Feild{
 					//	Name:  "Topics",
@@ -170,11 +173,11 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 					//})
 					cols = append(cols, database.Feild{
 						Name:  "BlockNumber",
-						Value: v.BlockNumber,
+						Value: rcptLog.BlockNumber,
 					})
 					cols = append(cols, database.Feild{
 						Name:  "BlockHash",
-						Value: v.BlockHash.Hex(),
+						Value: rcptLog.BlockHash.Hex(),
 					})
 					cols = append(cols, database.Feild{
 						Name:  "BlockTime",
@@ -182,11 +185,11 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 					})
 					cols = append(cols, database.Feild{
 						Name:  "TxHash",
-						Value: v.TxHash.Hex(),
+						Value: rcptLog.TxHash.Hex(),
 					})
 					cols = append(cols, database.Feild{
 						Name:  "TxIndex",
-						Value: v.TxIndex,
+						Value: rcptLog.TxIndex,
 					})
 
 					//cols = append(cols, database.Feild{
@@ -195,7 +198,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 					//})
 					cols = append(cols, database.Feild{
 						Name:  "Removed",
-						Value: v.Removed,
+						Value: rcptLog.Removed,
 					})
 				}
 				var indexedParams = make(map[string]interface{})
