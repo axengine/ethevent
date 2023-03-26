@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var CreateTaskTableSQL = `CREATE TABLE IF NOT EXISTS TASK (
+var CreateTaskTableSQL = `CREATE TABLE IF NOT EXISTS ETH_TASK (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     contract  TEXT    NOT NULL,
     abi       TEXT    NOT NULL,

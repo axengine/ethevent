@@ -33,7 +33,7 @@ func (ci *ChainIndex) Init() error {
 
 	var tasks []model.Task
 	where := []database.Where{{Name: "1", Value: 1}}
-	if err := ci.db.SelectRows("TASK", where, nil, nil, &tasks); err != nil {
+	if err := ci.db.SelectRows("ETH_TASK", where, nil, nil, &tasks); err != nil {
 		panic(err)
 	}
 
@@ -84,7 +84,7 @@ func (ci *ChainIndex) Init() error {
 func (ci *ChainIndex) Start(ctx context.Context) error {
 	var tasks []model.Task
 	where := []database.Where{{Name: "1", Value: 1}}
-	if err := ci.db.SelectRows("TASK", where, nil, nil, &tasks); err != nil {
+	if err := ci.db.SelectRows("ETH_TASK", where, nil, nil, &tasks); err != nil {
 		return err
 	}
 
@@ -236,7 +236,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 				return err
 			}
 		}
-		if _, err := tx.Exec("UPDATE TASK SET CURRENT=CURRENT+1 WHERE ID=?", t.ID); err != nil {
+		if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=CURRENT+1 WHERE ID=?", t.ID); err != nil {
 			return err
 		}
 		t.Current = t.Current + 1
