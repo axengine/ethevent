@@ -1,4 +1,4 @@
-package dbo
+package database
 
 import "errors"
 

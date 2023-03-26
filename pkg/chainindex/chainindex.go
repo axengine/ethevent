@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/axengine/ethcli"
-	"github.com/axengine/ethevent/pkg/dbo"
+	"github.com/axengine/ethevent/pkg/database"
 	"github.com/axengine/ethevent/pkg/model"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,11 +15,11 @@ import (
 )
 
 type ChainIndex struct {
-	db     *dbo.DBO
+	db     *database.DBO
 	logger *zap.Logger
 }
 
-func New(logger *zap.Logger, db *dbo.DBO) *ChainIndex {
+func New(logger *zap.Logger, db *database.DBO) *ChainIndex {
 	return &ChainIndex{db: db, logger: logger}
 }
 
@@ -32,7 +32,7 @@ func (ci *ChainIndex) Init() error {
 	}
 
 	var tasks []model.Task
-	where := []dbo.Where{{Name: "1", Value: 1}}
+	where := []database.Where{{Name: "1", Value: 1}}
 	if err := ci.db.SelectRows("TASK", where, nil, nil, &tasks); err != nil {
 		panic(err)
 	}
@@ -83,29 +83,27 @@ func (ci *ChainIndex) Init() error {
 
 func (ci *ChainIndex) Start(ctx context.Context) error {
 	var tasks []model.Task
-	where := []dbo.Where{{Name: "1", Value: 1}}
+	where := []database.Where{{Name: "1", Value: 1}}
 	if err := ci.db.SelectRows("TASK", where, nil, nil, &tasks); err != nil {
-		panic(err)
+		return err
 	}
 
 	for _, v := range tasks {
 		if cli, err := ethcli.New(v.Rpc); err != nil {
 			return err
 		} else {
-			if err := ci.start(ctx, cli, &v); err != nil {
-				return err
-			}
+			go ci.start(ctx, cli, &v)
 		}
 	}
 	return nil
 }
 
-func (ci *ChainIndex) start(ctx context.Context, cli *ethcli.ETHCli, t *model.Task) error {
+func (ci *ChainIndex) start(ctx context.Context, cli *ethcli.ETHCli, t *model.Task) {
 	for {
 		select {
 		case <-ctx.Done():
 			ci.logger.Info("ChainIndex exit")
-			return nil
+			return
 		default:
 			number, err := cli.BlockNumber(ctx)
 			if err != nil {
@@ -124,7 +122,7 @@ func (ci *ChainIndex) start(ctx context.Context, cli *ethcli.ETHCli, t *model.Ta
 
 type Event struct {
 	Table string
-	Cols  []dbo.Feild
+	Cols  []database.Feild
 }
 
 func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, number uint64, t *model.Task) error {
@@ -156,46 +154,46 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 					return err
 				}
 
-				var cols []dbo.Feild
+				var cols []database.Feild
 				{
-					cols = append(cols, dbo.Feild{
+					cols = append(cols, database.Feild{
 						Name:  "Address",
 						Value: v.Address.Hex(),
 					})
-					//cols = append(cols, dbo.Feild{
+					//cols = append(cols, database.Feild{
 					//	Name:  "Topics",
 					//	Value: v.Topics,
 					//})
-					//cols = append(cols, dbo.Feild{
+					//cols = append(cols, database.Feild{
 					//	Name:  "Data",
 					//	Value: v.Data,
 					//})
-					cols = append(cols, dbo.Feild{
+					cols = append(cols, database.Feild{
 						Name:  "BlockNumber",
 						Value: v.BlockNumber,
 					})
-					cols = append(cols, dbo.Feild{
+					cols = append(cols, database.Feild{
 						Name:  "BlockHash",
 						Value: v.BlockHash.Hex(),
 					})
-					cols = append(cols, dbo.Feild{
+					cols = append(cols, database.Feild{
 						Name:  "BlockTime",
 						Value: block.Time(),
 					})
-					cols = append(cols, dbo.Feild{
+					cols = append(cols, database.Feild{
 						Name:  "TxHash",
 						Value: v.TxHash.Hex(),
 					})
-					cols = append(cols, dbo.Feild{
+					cols = append(cols, database.Feild{
 						Name:  "TxIndex",
 						Value: v.TxIndex,
 					})
 
-					//cols = append(cols, dbo.Feild{
+					//cols = append(cols, database.Feild{
 					//	Name:  "Index",
 					//	Value: v.Index,
 					//})
-					cols = append(cols, dbo.Feild{
+					cols = append(cols, database.Feild{
 						Name:  "Removed",
 						Value: v.Removed,
 					})
@@ -208,7 +206,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 					if vv, ok := v.(fmt.Stringer); ok {
 						v = vv.String()
 					}
-					cols = append(cols, dbo.Feild{
+					cols = append(cols, database.Feild{
 						Name:  k,
 						Value: v,
 					})
@@ -218,7 +216,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 					if vv, ok := unindexed[i].(fmt.Stringer); ok {
 						unindexed[i] = vv.String()
 					}
-					cols = append(cols, dbo.Feild{
+					cols = append(cols, database.Feild{
 						Name:  v.Name,
 						Value: unindexed[i],
 					})

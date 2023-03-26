@@ -1,0 +1,189 @@
+basePath: /
+definitions:
+  bean.BlockRo:
+    properties:
+      hash:
+        type: string
+      number:
+        type: integer
+    type: object
+  bean.Event:
+    additionalProperties: true
+    type: object
+  bean.EventListRo:
+    properties:
+      blockRo:
+        $ref: '#/definitions/bean.BlockRo'
+      contract:
+        type: string
+      event:
+        type: string
+      pageRo:
+        $ref: '#/definitions/bean.PageRo'
+      timeRo:
+        $ref: '#/definitions/bean.TimeRo'
+      txRo:
+        $ref: '#/definitions/bean.TxRo'
+      where:
+        items:
+          $ref: '#/definitions/bean.Where'
+        type: array
+    required:
+    - contract
+    - event
+    - pageRo
+    type: object
+  bean.PageRo:
+    properties:
+      cursor:
+        minimum: 0
+        type: integer
+      limit:
+        maximum: 100
+        minimum: 1
+        type: integer
+    required:
+    - cursor
+    - limit
+    type: object
+  bean.Resp:
+    properties:
+      resCode:
+        type: integer
+      resDesc:
+        type: string
+      result: {}
+      traceId:
+        type: string
+    type: object
+  bean.TimeRo:
+    properties:
+      begin:
+        type: integer
+      end:
+        type: integer
+    type: object
+  bean.TxRo:
+    properties:
+      hash:
+        type: string
+    type: object
+  bean.Where:
+    properties:
+      name:
+        type: string
+      value:
+        type: string
+    type: object
+  model.Task:
+    properties:
+      abi:
+        type: string
+      begin:
+        type: integer
+      chainId:
+        type: integer
+      contract:
+        type: string
+      current:
+        type: integer
+      id:
+        type: integer
+      rpc:
+        type: string
+    type: object
+info:
+  contact: {}
+  title: eth-events API
+  version: 0.1.0
+paths:
+  /v1/event/list:
+    post:
+      consumes:
+      - application/json
+      description: 查询事件
+      parameters:
+      - description: request param
+        in: body
+        name: Request
+        required: true
+        schema:
+          $ref: '#/definitions/bean.EventListRo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            items:
+              $ref: '#/definitions/bean.Event'
+            type: array
+      summary: 查询事件
+      tags:
+      - Event
+  /v1/task/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加任务
+      parameters:
+      - in: query
+        name: abi
+        required: true
+        type: string
+      - in: query
+        name: begin
+        required: true
+        type: integer
+      - in: query
+        name: chainId
+        required: true
+        type: integer
+      - in: query
+        name: contract
+        required: true
+        type: string
+      - in: query
+        name: rpc
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/bean.Resp'
+      summary: 添加任务
+      tags:
+      - TASK
+  /v1/task/list:
+    get:
+      consumes:
+      - application/json
+      description: 查询任务列表
+      parameters:
+      - in: query
+        minimum: 0
+        name: cursor
+        required: true
+        type: integer
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            items:
+              $ref: '#/definitions/model.Task'
+            type: array
+      summary: 查询任务列表
+      tags:
+      - TASK
+swagger: "2.0"

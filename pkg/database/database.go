@@ -1,4 +1,4 @@
-package dbo
+package database
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 )
 
@@ -270,6 +271,68 @@ func (dbo *DBO) SelectRows(table string, where []Where, order *Order, paging *Pa
 	dbo.logger.Debug("SelectRows", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
 	return dbo.conn.Select(result, sqlBuff.String(), values...)
+}
+
+// SelectRowsToMaps select rows to map slice
+func (dbo *DBO) SelectRowsToMaps(table string, where []Where, order *Order, paging *Paging) ([]map[string]interface{}, error) {
+	if table == "" {
+		return nil, errors.New("table name is required")
+	}
+	if len(where) == 0 {
+		return nil, errors.New("full-table-select is not allowed")
+	}
+	if order != nil && (len(order.Feilds) == 0 || order.Type == "") {
+		return nil, errors.New("order type and fields is required")
+	}
+
+	values := make([]interface{}, len(where))
+	for i, v := range where {
+		values[i] = v.Value
+	}
+
+	var sqlBuff bytes.Buffer
+	sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+	for i := 0; i < len(where); i++ {
+		sqlBuff.WriteString(fmt.Sprintf(" and %s %s ? ", where[i].Name, where[i].GetOp()))
+	}
+	if order != nil {
+		// append where clause for paging
+		//		if paging != nil && paging.CursorValue != 0 {
+		//			sqlBuff.WriteString(fmt.Sprintf(" and %s %s ? ", paging.CursorName, order.GetOp()))
+		//			values = append(values, paging.CursorValue)
+		//		}
+
+		// append order by clause for ordering
+		sqlBuff.WriteString(fmt.Sprintf(" order by %s ", order.Feilds[0]))
+		for i := 1; i < len(order.Feilds); i++ {
+			sqlBuff.WriteString(fmt.Sprintf(" , %s ", order.Feilds[i]))
+		}
+		sqlBuff.WriteString(order.Type)
+
+		// append limit clause for paging
+		if paging != nil {
+			//sqlBuff.WriteString(" limit ? ")
+			//values = append(values, paging.Limit)
+			sqlBuff.WriteString(fmt.Sprintf(" limit %d offset %d ", paging.Limit, paging.CursorValue))
+		}
+	}
+
+	dbo.logger.Debug("SelectRows", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
+
+	rows, err := dbo.conn.Queryx(sqlBuff.String(), values...)
+	if err != nil {
+		return nil, err
+	}
+
+	var result = make([]map[string]interface{}, 0)
+	for rows.Next() {
+		var dest = make(map[string]interface{})
+		if err = rows.MapScan(dest); err != nil {
+			return nil, err
+		}
+		result = append(result, dest)
+	}
+	return result, nil
 }
 
 // SelectRowsOffset select rows to struct slice
