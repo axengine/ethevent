@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
-	"log"
 )
 
 type DBO struct {
@@ -55,6 +54,8 @@ func (dbo *DBO) Exec(tx *sql.Tx, query string, args ...any) (sql.Result, error) 
 		}
 		return tx.Exec(query, args)
 	}
+	dbo.logger.Debug("Exec", zap.String("query", query), zap.Any("args", args))
+
 	if len(args) == 0 {
 		return dbo.conn.Exec(query)
 	}
@@ -86,6 +87,8 @@ func (dbo *DBO) Insert(tx *sql.Tx, table string, fields []Feild) (sql.Result, er
 	for i, v := range fields {
 		values[i] = v.Value
 	}
+	dbo.logger.Debug("Insert", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
+
 	if tx != nil {
 		return tx.Exec(sqlBuff.String(), values...)
 	}
@@ -112,6 +115,9 @@ func (dbo *DBO) Delete(tx *sql.Tx, table string, where []Where) (sql.Result, err
 	for i, v := range where {
 		values[i] = v.Value
 	}
+
+	dbo.logger.Debug("Delete", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
+
 	var res sql.Result
 	var err error
 	if tx != nil {
@@ -155,7 +161,7 @@ func (dbo *DBO) Update(tx *sql.Tx, table string, toupdate []Feild, where []Where
 		values[len(toupdate)+i] = v.Value
 	}
 
-	log.Println("Update ", sqlBuff.String(), values)
+	dbo.logger.Debug("Update", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
 	var res sql.Result
 	var err error
@@ -212,8 +218,7 @@ func (dbo *DBO) SelectRowsUnion(table string, wheres [][]Where, order *Order, pa
 
 		sqlBuff.WriteString(fmt.Sprintf(" limit %d offset %d ", paging.Limit, paging.CursorValue))
 	}
-
-	log.Println("SelectRowsUnion ", sqlBuff.String(), values)
+	dbo.logger.Debug("SelectRowsUnion", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
 	return dbo.conn.Select(result, sqlBuff.String(), values...)
 }
@@ -262,7 +267,7 @@ func (dbo *DBO) SelectRows(table string, where []Where, order *Order, paging *Pa
 		}
 	}
 
-	log.Println("SelectRows ", sqlBuff.String(), values)
+	dbo.logger.Debug("SelectRows", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
 	return dbo.conn.Select(result, sqlBuff.String(), values...)
 }
@@ -301,7 +306,7 @@ func (dbo *DBO) SelectRowsOffset(table string, where []Where, order *Order, offs
 		sqlBuff.WriteString(fmt.Sprintf(" limit %d offset %d ", limit, offset))
 	}
 
-	log.Println("SelectRowsOffset ", sqlBuff.String(), values)
+	dbo.logger.Debug("SelectRowsOffset", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
 	// execute
 	return dbo.conn.Select(result, sqlBuff.String(), values...)
@@ -312,9 +317,7 @@ func (dbo *DBO) SelectRawSQL(table string, sqlStr string, values []interface{}, 
 	if table == "" {
 		return errors.New("table name is required")
 	}
-
-	log.Println("selectRawSQL ", sqlStr, values)
-
+	dbo.logger.Debug("selectRawSQL", zap.String("sql", sqlStr), zap.Any("values", values))
 	return dbo.conn.Select(result, sqlStr, values...)
 }
 
@@ -327,9 +330,7 @@ func (dbo *DBO) Excute(stmt *sql.Stmt, fields []Feild) (sql.Result, error) {
 }
 
 func (dbo *DBO) Prepare(tx *sql.Tx, table string, fields []Feild) (*sql.Stmt, error) {
-
 	var sqlBuff bytes.Buffer
-
 	sqlBuff.WriteString(fmt.Sprintf("insert into %s (", table))
 	for i := 0; i < len(fields)-1; i++ {
 		sqlBuff.WriteString(fmt.Sprintf("%s,", fields[i].Name))
@@ -340,7 +341,7 @@ func (dbo *DBO) Prepare(tx *sql.Tx, table string, fields []Feild) (*sql.Stmt, er
 		sqlBuff.WriteString(fmt.Sprintf("?,"))
 	}
 	sqlBuff.WriteString(fmt.Sprintf("?);"))
-
+	dbo.logger.Debug("Prepare", zap.String("sql", sqlBuff.String()))
 	if tx != nil {
 		return tx.Prepare(sqlBuff.String())
 	} else {

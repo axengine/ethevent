@@ -14,7 +14,7 @@ import (
 
 func main() {
 	dbo := dbo.New("./test.db", log.Logger)
-	ci := chainindex.New(dbo)
+	ci := chainindex.New(log.Logger, dbo)
 	if err := ci.Init(); err != nil {
 		log.Logger.Panic("Init", zap.Error(err))
 	}

@@ -7,28 +7,27 @@ import (
 	"github.com/axengine/ethcli"
 	"github.com/axengine/ethevent/pkg/dbo"
 	"github.com/axengine/ethevent/pkg/model"
-	"github.com/axengine/utils/log"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/zap"
 	"math/big"
-	"reflect"
 	"strings"
 )
 
 type ChainIndex struct {
-	db *dbo.DBO
+	db     *dbo.DBO
+	logger *zap.Logger
 }
 
-func New(db *dbo.DBO) *ChainIndex {
-	return &ChainIndex{db: db}
+func New(logger *zap.Logger, db *dbo.DBO) *ChainIndex {
+	return &ChainIndex{db: db, logger: logger}
 }
 
 // Init initial table and index
 func (ci *ChainIndex) Init() error {
 	// create table TASK
 	if _, err := ci.db.Exec(nil, model.CreateTaskTableSQL); err != nil {
-		log.Logger.Error("Exec", zap.Error(err), zap.String("sql", model.CreateTaskTableSQL))
+		ci.logger.Error("Exec", zap.Error(err), zap.String("sql", model.CreateTaskTableSQL))
 		return err
 	}
 
@@ -65,14 +64,14 @@ func (ci *ChainIndex) Init() error {
 
 			ctsqls := model.CreateTableSQL(tableName, createCols)
 			if _, err := ci.db.Exec(nil, ctsqls); err != nil {
-				log.Logger.Error("Exec", zap.Error(err), zap.String("sql", ctsqls))
+				ci.logger.Error("Exec", zap.Error(err), zap.String("sql", ctsqls))
 				return err
 			}
 
 			cisqls := model.CreateIndexSQL(tableName, indexCols)
 			for _, v := range cisqls {
 				if _, err := ci.db.Exec(nil, v); err != nil {
-					log.Logger.Error("Exec", zap.Error(err), zap.String("sql", v))
+					ci.logger.Error("Exec", zap.Error(err), zap.String("sql", v))
 					return err
 				}
 			}
@@ -105,17 +104,17 @@ func (ci *ChainIndex) start(ctx context.Context, cli *ethcli.ETHCli, t *model.Ta
 	for {
 		select {
 		case <-ctx.Done():
-			log.Logger.Info("ChainIndex exit")
+			ci.logger.Info("ChainIndex exit")
 			return nil
 		default:
 			number, err := cli.BlockNumber(ctx)
 			if err != nil {
-				log.Logger.Warn("BlockNumber", zap.Error(err))
+				ci.logger.Warn("BlockNumber", zap.Error(err))
 				continue
 			}
 			if t.Current < number {
 				if err := ci.handleNumber(ctx, cli, t.Current+1, t); err != nil {
-					log.Logger.Error("handleNumber", zap.Error(err), zap.Uint64("chain", t.ChainId))
+					ci.logger.Error("handleNumber", zap.Error(err), zap.Uint64("chain", t.ChainId))
 					continue
 				}
 			}
@@ -148,7 +147,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 			for _, v := range receipt.Logs {
 				event, err := ins.EventByID(v.Topics[0])
 				if err != nil {
-					return err
+					continue
 				}
 
 				indexed := v.Topics[1:]
@@ -158,53 +157,71 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 				}
 
 				var cols []dbo.Feild
-				for i, arg := range event.Inputs {
-					if arg.Indexed {
-						data := indexed[i].Bytes()
-						var value interface{}
-						switch arg.Type.T {
-						case abi.AddressTy:
-							var x common.Address
-							x.SetBytes(data)
-							value = x.Hex()
-						case abi.IntTy, abi.UintTy:
-							var x = new(big.Int)
-							x.SetBytes(data)
-							value = x.String()
-						case abi.BoolTy:
-							var x bool
-							if data[31] == 1 {
-								x = true
-							}
-							value = x
-							//todo
-						}
-						cols = append(cols, dbo.Feild{
-							Name:  arg.Name,
-							Value: value,
-						})
-						continue
-					}
-
-					// unindexed
-					switch reflect.TypeOf(unindexed[i-len(indexed)]).String() {
-					case "*big.Int":
-						var x *big.Int
-						x = unindexed[i-len(indexed)].(*big.Int)
-						cols = append(cols, dbo.Feild{
-							Name:  arg.Name,
-							Value: x.String(),
-						})
-					default:
-						cols = append(cols, dbo.Feild{
-							Name:  arg.Name,
-							Value: unindexed[i-len(indexed)],
-						})
-					}
+				{
+					cols = append(cols, dbo.Feild{
+						Name:  "Address",
+						Value: v.Address.Hex(),
+					})
 					//cols = append(cols, dbo.Feild{
-					//	Name:  arg.Name,
-					//	Value: unindexed[i-len(indexed)],
+					//	Name:  "Topics",
+					//	Value: v.Topics,
 					//})
+					//cols = append(cols, dbo.Feild{
+					//	Name:  "Data",
+					//	Value: v.Data,
+					//})
+					cols = append(cols, dbo.Feild{
+						Name:  "BlockNumber",
+						Value: v.BlockNumber,
+					})
+					cols = append(cols, dbo.Feild{
+						Name:  "BlockHash",
+						Value: v.BlockHash.Hex(),
+					})
+					cols = append(cols, dbo.Feild{
+						Name:  "BlockTime",
+						Value: block.Time(),
+					})
+					cols = append(cols, dbo.Feild{
+						Name:  "TxHash",
+						Value: v.TxHash.Hex(),
+					})
+					cols = append(cols, dbo.Feild{
+						Name:  "TxIndex",
+						Value: v.TxIndex,
+					})
+
+					//cols = append(cols, dbo.Feild{
+					//	Name:  "Index",
+					//	Value: v.Index,
+					//})
+					cols = append(cols, dbo.Feild{
+						Name:  "Removed",
+						Value: v.Removed,
+					})
+				}
+				var indexedParams = make(map[string]interface{})
+				if err := abi.ParseTopicsIntoMap(indexedParams, event.Inputs[:len(indexed)], indexed); err != nil {
+					return err
+				}
+				for k, v := range indexedParams {
+					if vv, ok := v.(fmt.Stringer); ok {
+						v = vv.String()
+					}
+					cols = append(cols, dbo.Feild{
+						Name:  k,
+						Value: v,
+					})
+				}
+
+				for i, v := range event.Inputs.NonIndexed() {
+					if vv, ok := unindexed[i].(fmt.Stringer); ok {
+						unindexed[i] = vv.String()
+					}
+					cols = append(cols, dbo.Feild{
+						Name:  v.Name,
+						Value: unindexed[i],
+					})
 				}
 
 				events = append(events, Event{
