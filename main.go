@@ -7,6 +7,7 @@ import (
 	"github.com/axengine/ethevent/pkg/http"
 	"github.com/axengine/ethevent/pkg/svc"
 	"github.com/axengine/utils/log"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
@@ -22,8 +23,7 @@ import (
 // @host
 // @BasePath /
 func main() {
-	viper.SetDefault("datadir", ".")
-	viper.SetDefault("http.port", 8080)
+	initParams()
 	dbo := database.New(filepath.Join(viper.GetString("datadir"), "ethevents.db"), log.Logger)
 	ci := chainindex.New(log.Logger, dbo)
 	if err := ci.Init(); err != nil {
@@ -52,4 +52,11 @@ func main() {
 			os.Exit(0)
 		}
 	}
+}
+
+func initParams() {
+	pflag.Int("http.port", 8080, "server http port")
+	pflag.String("datadir", ".", "db path")
+	pflag.Parse()
+	viper.BindPFlags(pflag.CommandLine)
 }
