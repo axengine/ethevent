@@ -23,7 +23,6 @@ import (
 // @host
 // @BasePath /
 func main() {
-	initParams()
 	dbo := database.New(filepath.Join(viper.GetString("datadir"), "ethevents.db"), log.Logger)
 	ci := chainindex.New(log.Logger, dbo)
 	if err := ci.Init(); err != nil {
@@ -54,7 +53,7 @@ func main() {
 	}
 }
 
-func initParams() {
+func init() {
 	pflag.Int("http.port", 8080, "server http port")
 	pflag.String("datadir", ".", "db path")
 	pflag.Parse()
