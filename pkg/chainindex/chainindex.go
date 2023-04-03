@@ -201,8 +201,16 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 						Value: rcptLog.Removed,
 					})
 				}
+				// 索引参数和非索引参数在旧版本solidity中可以乱序
 				var indexedParams = make(map[string]interface{})
-				if err := abi.ParseTopicsIntoMap(indexedParams, event.Inputs[:len(indexed)], indexed); err != nil {
+				var indexedArgs = make([]abi.Argument, 0)
+				for _, v := range event.Inputs {
+					if v.Indexed {
+						indexedArgs = append(indexedArgs, v)
+					}
+				}
+
+				if err := abi.ParseTopicsIntoMap(indexedParams, indexedArgs, indexed); err != nil {
 					return err
 				}
 				for k, v := range indexedParams {

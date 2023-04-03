@@ -70,7 +70,9 @@ func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, 
 		database.Where{Name: "1", Value: 1},
 	}
 	for _, v := range req.Where {
-		where = append(where, database.Where{Name: v.Name, Value: v.Value})
+		if v.Name != "" && v.Value != "" {
+			where = append(where, database.Where{Name: v.Name, Value: v.Value})
+		}
 	}
 
 	if req.BlockRo != nil {

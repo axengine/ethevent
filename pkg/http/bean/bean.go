@@ -34,7 +34,7 @@ type Where struct {
 
 type EventListRo struct {
 	Contract string   `query:"contract" json:"contract" validate:"required,len=42,startswith=0x"`
-	Event    string   `query:"event" json:"event" validate:"required"`
+	Event    string   `query:"event" json:"event" validate:"required,gt=0"`
 	Where    []Where  `query:"where" json:"where" validate:"omitempty"`
 	BlockRo  *BlockRo `query:"blockRo" json:"blockRo" validate:"omitempty"`
 	TxRo     *TxRo    `query:"txRo" json:"txRo" validate:"omitempty"`
