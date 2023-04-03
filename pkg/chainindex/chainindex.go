@@ -277,7 +277,8 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 				return err
 			}
 		}
-		if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? WHERE ID=?", number, t.ID); err != nil {
+		if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
+			number, time.Now().Unix(), t.ID); err != nil {
 			return err
 		}
 		t.Current = number
