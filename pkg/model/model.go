@@ -7,13 +7,16 @@ import (
 )
 
 type Task struct {
-	ID       uint   `db:"id"`
-	Contract string `db:"contract"`
-	Abi      string `db:"abi"`
-	ChainId  uint64 `db:"chainId"`
-	Rpc      string `db:"rpc"`
-	Begin    uint64 `db:"begin"`
-	Current  uint64 `db:"current"`
+	ID        uint   `db:"id"`
+	Contract  string `db:"contract"`
+	Abi       string `db:"abi"`
+	ChainId   uint64 `db:"chainId"`
+	Rpc       string `db:"rpc"`
+	Begin     uint64 `db:"begin"`
+	Current   uint64 `db:"current"`
+	Paused    uint   `db:"paused"` // 是否暂停
+	DeletedAt uint64 `db:"deletedAt"`
+	UpdatedAt uint64 `db:"updatedAt"`
 }
 
 func (t *Task) TablePrefix() string {

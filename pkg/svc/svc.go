@@ -44,14 +44,57 @@ func (svc *Service) TaskAdd(ctx context.Context, req *bean.TaskAddRo) error {
 	}
 
 	fields := []database.Feild{
-		database.Feild{Name: "Contract", Value: common.HexToAddress(req.Contract).Hex()},
-		database.Feild{Name: "blockheight", Value: req.Abi},
-		database.Feild{Name: "blockhash", Value: req.ChainId},
-		database.Feild{Name: "actioncount", Value: req.Rpc},
-		database.Feild{Name: "actionid", Value: req.Begin},
+		database.Feild{Name: "contract", Value: common.HexToAddress(req.Contract).Hex()},
+		database.Feild{Name: "abi", Value: req.Abi},
+		database.Feild{Name: "chainId", Value: req.ChainId},
+		database.Feild{Name: "rpc", Value: req.Rpc},
+		database.Feild{Name: "begin", Value: req.Begin},
+		database.Feild{Name: "current", Value: req.Begin},
 	}
 
 	_, err := svc.db.Insert(nil, "", fields)
+	return err
+}
+
+func (svc *Service) TaskUpdate(ctx context.Context, req *bean.TaskUpdateRo) error {
+	if _, err := abi.JSON(strings.NewReader(req.Abi)); err != nil {
+		return err
+	}
+
+	where := []database.Where{
+		database.Where{Name: "id", Value: req.Id},
+	}
+
+	fields := []database.Feild{
+		database.Feild{Name: "contract", Value: common.HexToAddress(req.Contract).Hex()},
+		database.Feild{Name: "abi", Value: req.Abi},
+		database.Feild{Name: "chainId", Value: req.ChainId},
+		database.Feild{Name: "rpc", Value: req.Rpc},
+		database.Feild{Name: "begin", Value: req.Begin},
+	}
+
+	_, err := svc.db.Update(nil, "ETH_TASK", fields, where)
+	return err
+}
+
+func (svc *Service) TaskPause(ctx context.Context, req *bean.TaskPauseRo) error {
+	where := []database.Where{
+		database.Where{Name: "id", Value: req.Id},
+	}
+	_, err := svc.db.Update(nil, "ETH_TASK", []database.Feild{
+		database.Feild{
+			Name:  "paused",
+			Value: 1,
+		},
+	}, where)
+	return err
+}
+
+func (svc *Service) TaskDelete(ctx context.Context, req *bean.TaskDeleteRo) error {
+	where := []database.Where{
+		database.Where{Name: "id", Value: req.Id},
+	}
+	_, err := svc.db.Delete(nil, "ETH_TASK", where)
 	return err
 }
 

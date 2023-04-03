@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"math/big"
 	"strings"
+	"time"
 )
 
 type ChainIndex struct {
@@ -108,9 +109,38 @@ func (ci *ChainIndex) start(ctx context.Context, cli *ethcli.ETHCli, t *model.Ta
 			ci.logger.Info("ChainIndex exit")
 			return
 		default:
+			var tasks []model.Task
+			where := []database.Where{
+				{Name: "1", Value: 1},
+				{Name: "ID", Value: t.ID},
+			}
+			if err := ci.db.SelectRows("ETH_TASK", where, nil, nil, &tasks); err != nil {
+				ci.logger.Error("SelectRows", zap.Error(err))
+				return
+			}
+			if len(tasks) > 0 {
+				t = &tasks[0]
+			}
+			if t.DeletedAt > 0 {
+				ci.logger.Debug("Task Deleted", zap.Uint("id", t.ID))
+				return
+			}
+			if t.Paused == 1 {
+				ci.logger.Debug("Task Paused", zap.Uint("id", t.ID))
+				time.Sleep(time.Second * 5)
+				continue
+			}
+
 			number, err := cli.BlockNumber(ctx)
 			if err != nil {
 				ci.logger.Warn("BlockNumber", zap.Error(err))
+				continue
+			}
+			if t.Current < t.Begin {
+				t.Current = t.Begin
+			}
+			if t.Current >= number {
+				time.Sleep(time.Second)
 				continue
 			}
 			if t.Current < number {
@@ -247,10 +277,10 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 				return err
 			}
 		}
-		if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=CURRENT+1 WHERE ID=?", t.ID); err != nil {
+		if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? WHERE ID=?", number, t.ID); err != nil {
 			return err
 		}
-		t.Current = t.Current + 1
+		t.Current = number
 		return nil
 	})
 

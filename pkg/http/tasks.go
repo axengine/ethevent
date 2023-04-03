@@ -52,3 +52,75 @@ func (hs *HttpServer) taskAdd(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, new(bean.Resp).Success(nil))
 }
+
+// taskPause
+// @Summary 任务暂停与运行
+// @Description 任务暂停与运行
+// @Tags TASK
+// @Accept json
+// @Produce json
+// @Param Request query bean.TaskPauseRo true "request param"
+// @Success 200 {object} bean.Resp "success"
+// @Router /v1/task/pause [POST]
+func (hs *HttpServer) taskPause(c echo.Context) error {
+	var req bean.TaskPauseRo
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
+	}
+	if err := c.Validate(req); err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+	}
+	err := hs.svc.TaskPause(context.Background(), &req)
+	if err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
+	}
+	return c.JSON(http.StatusOK, new(bean.Resp).Success(nil))
+}
+
+// taskDelete
+// @Summary 删除任务
+// @Description 删除任务
+// @Tags TASK
+// @Accept json
+// @Produce json
+// @Param Request query bean.TaskDeleteRo true "request param"
+// @Success 200 {object} bean.Resp "success"
+// @Router /v1/task/delete [POST]
+func (hs *HttpServer) taskDelete(c echo.Context) error {
+	var req bean.TaskDeleteRo
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
+	}
+	if err := c.Validate(req); err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+	}
+	err := hs.svc.TaskDelete(context.Background(), &req)
+	if err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
+	}
+	return c.JSON(http.StatusOK, new(bean.Resp).Success(nil))
+}
+
+// taskUpdate
+// @Summary 更新任务
+// @Description 更新任务
+// @Tags TASK
+// @Accept json
+// @Produce json
+// @Param Request query bean.TaskUpdateRo true "request param"
+// @Success 200 {object} bean.Resp "success"
+// @Router /v1/task/update [POST]
+func (hs *HttpServer) taskUpdate(c echo.Context) error {
+	var req bean.TaskUpdateRo
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
+	}
+	if err := c.Validate(req); err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+	}
+	err := hs.svc.TaskUpdate(context.Background(), &req)
+	if err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
+	}
+	return c.JSON(http.StatusOK, new(bean.Resp).Success(nil))
+}

@@ -87,10 +87,17 @@ definitions:
         type: string
       current:
         type: integer
+      deletedAt:
+        type: integer
       id:
+        type: integer
+      paused:
+        description: 是否暂停
         type: integer
       rpc:
         type: string
+      updatedAt:
+        type: integer
     type: object
 info:
   contact: {}
@@ -157,6 +164,26 @@ paths:
       summary: 添加任务
       tags:
       - TASK
+  /v1/task/delete:
+    post:
+      consumes:
+      - application/json
+      description: 删除任务
+      parameters:
+      - in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/bean.Resp'
+      summary: 删除任务
+      tags:
+      - TASK
   /v1/task/list:
     get:
       consumes:
@@ -184,6 +211,72 @@ paths:
               $ref: '#/definitions/model.Task'
             type: array
       summary: 查询任务列表
+      tags:
+      - TASK
+  /v1/task/pause:
+    post:
+      consumes:
+      - application/json
+      description: 任务暂停与运行
+      parameters:
+      - in: query
+        name: id
+        required: true
+        type: integer
+      - enum:
+        - 0
+        in: query
+        name: pause
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/bean.Resp'
+      summary: 任务暂停与运行
+      tags:
+      - TASK
+  /v1/task/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新任务
+      parameters:
+      - in: query
+        name: abi
+        required: true
+        type: string
+      - in: query
+        name: begin
+        required: true
+        type: integer
+      - in: query
+        name: chainId
+        required: true
+        type: integer
+      - in: query
+        name: contract
+        required: true
+        type: string
+      - in: query
+        name: id
+        required: true
+        type: integer
+      - in: query
+        name: rpc
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/bean.Resp'
+      summary: 更新任务
       tags:
       - TASK
 swagger: "2.0"

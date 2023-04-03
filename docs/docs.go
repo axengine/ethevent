@@ -107,6 +107,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/task/delete": {
+            "post": {
+                "description": "删除任务",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TASK"
+                ],
+                "summary": "删除任务",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "success",
+                        "schema": {
+                            "$ref": "#/definitions/bean.Resp"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/task/list": {
             "get": {
                 "description": "查询任务列表",
@@ -145,6 +176,107 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/model.Task"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/task/pause": {
+            "post": {
+                "description": "任务暂停与运行",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TASK"
+                ],
+                "summary": "任务暂停与运行",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            0
+                        ],
+                        "type": "integer",
+                        "name": "pause",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "success",
+                        "schema": {
+                            "$ref": "#/definitions/bean.Resp"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/task/update": {
+            "post": {
+                "description": "更新任务",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TASK"
+                ],
+                "summary": "更新任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "abi",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "name": "begin",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "name": "chainId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "contract",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "rpc",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "success",
+                        "schema": {
+                            "$ref": "#/definitions/bean.Resp"
                         }
                     }
                 }
@@ -282,11 +414,21 @@ const docTemplate = `{
                 "current": {
                     "type": "integer"
                 },
+                "deletedAt": {
+                    "type": "integer"
+                },
                 "id": {
+                    "type": "integer"
+                },
+                "paused": {
+                    "description": "是否暂停",
                     "type": "integer"
                 },
                 "rpc": {
                     "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
                 }
             }
         }

@@ -13,6 +13,20 @@ type TaskAddRo struct {
 	Begin    uint64 `query:"begin" validate:"required,gt=0"`
 }
 
+type TaskPauseRo struct {
+	Id    uint `json:"id" validate:"required,gt=0"`
+	Pause uint `json:"pause" validate:"required,oneof=0,1"`
+}
+
+type TaskDeleteRo struct {
+	Id uint `json:"id" validate:"required,gt=0"`
+}
+
+type TaskUpdateRo struct {
+	Id uint `json:"id" validate:"required,gt=0"`
+	TaskAddRo
+}
+
 type BlockRo struct {
 	Number uint64 `query:"number" validate:"omitempty"`
 	Hash   string `query:"hash" validate:"omitempty"`

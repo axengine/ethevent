@@ -34,6 +34,10 @@ func (hs *HttpServer) Start(ctx context.Context, dev bool, port int) {
 	v1 := e.Group("/v1")
 	v1.GET("/task/list", hs.taskList)
 	v1.POST("/task/add", hs.taskAdd)
+	v1.POST("/task/pause", hs.taskPause)
+	v1.POST("/task/delete", hs.taskDelete)
+	v1.POST("/task/update", hs.taskUpdate)
+
 	v1.POST("/event/list", hs.eventList)
 
 	// Start the echo v4 server on port 8080
