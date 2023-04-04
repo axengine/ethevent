@@ -67,34 +67,13 @@ const docTemplate = `{
                 "summary": "添加任务",
                 "parameters": [
                     {
-                        "type": "string",
-                        "name": "abi",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "name": "begin",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "name": "chainId",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "name": "contract",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "name": "rpc",
-                        "in": "query",
-                        "required": true
+                        "description": "request param",
+                        "name": "Request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/bean.TaskAddRo"
+                        }
                     }
                 ],
                 "responses": {
@@ -122,10 +101,13 @@ const docTemplate = `{
                 "summary": "删除任务",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "name": "id",
-                        "in": "query",
-                        "required": true
+                        "description": "request param",
+                        "name": "Request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/bean.TaskDeleteRo"
+                        }
                     }
                 ],
                 "responses": {
@@ -196,19 +178,13 @@ const docTemplate = `{
                 "summary": "任务暂停与运行",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "name": "id",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "enum": [
-                            0
-                        ],
-                        "type": "integer",
-                        "name": "pause",
-                        "in": "query",
-                        "required": true
+                        "description": "request param",
+                        "name": "Request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/bean.TaskPauseRo"
+                        }
                     }
                 ],
                 "responses": {
@@ -236,40 +212,13 @@ const docTemplate = `{
                 "summary": "更新任务",
                 "parameters": [
                     {
-                        "type": "string",
-                        "name": "abi",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "name": "begin",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "name": "chainId",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "name": "contract",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "name": "id",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "name": "rpc",
-                        "in": "query",
-                        "required": true
+                        "description": "request param",
+                        "name": "Request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/bean.TaskUpdateRo"
+                        }
                     }
                 ],
                 "responses": {
@@ -366,6 +315,99 @@ const docTemplate = `{
                 }
             }
         },
+        "bean.TaskAddRo": {
+            "type": "object",
+            "required": [
+                "abi",
+                "chainId",
+                "contract",
+                "interval",
+                "rpc",
+                "start"
+            ],
+            "properties": {
+                "abi": {
+                    "type": "string"
+                },
+                "chainId": {
+                    "type": "integer"
+                },
+                "contract": {
+                    "type": "string"
+                },
+                "interval": {
+                    "description": "轮询间隔，建议为区块出块间隔",
+                    "type": "integer"
+                },
+                "rpc": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "integer"
+                }
+            }
+        },
+        "bean.TaskDeleteRo": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "bean.TaskPauseRo": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "pause": {
+                    "type": "integer"
+                }
+            }
+        },
+        "bean.TaskUpdateRo": {
+            "type": "object",
+            "required": [
+                "abi",
+                "chainId",
+                "contract",
+                "id",
+                "interval",
+                "rpc",
+                "start"
+            ],
+            "properties": {
+                "abi": {
+                    "type": "string"
+                },
+                "chainId": {
+                    "type": "integer"
+                },
+                "contract": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "interval": {
+                    "description": "轮询间隔，建议为区块出块间隔",
+                    "type": "integer"
+                },
+                "rpc": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "integer"
+                }
+            }
+        },
         "bean.TimeRo": {
             "type": "object",
             "properties": {
@@ -402,9 +444,6 @@ const docTemplate = `{
                 "abi": {
                     "type": "string"
                 },
-                "begin": {
-                    "type": "integer"
-                },
                 "chainId": {
                     "type": "integer"
                 },
@@ -420,12 +459,19 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "interval": {
+                    "description": "区块轮询间隔",
+                    "type": "integer"
+                },
                 "paused": {
                     "description": "是否暂停",
                     "type": "integer"
                 },
                 "rpc": {
                     "type": "string"
+                },
+                "start": {
+                    "type": "integer"
                 },
                 "updatedAt": {
                     "type": "integer"

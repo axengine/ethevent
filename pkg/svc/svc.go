@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"strings"
+	"time"
 )
 
 type Service struct {
@@ -48,11 +49,12 @@ func (svc *Service) TaskAdd(ctx context.Context, req *bean.TaskAddRo) error {
 		database.Feild{Name: "abi", Value: req.Abi},
 		database.Feild{Name: "chainId", Value: req.ChainId},
 		database.Feild{Name: "rpc", Value: req.Rpc},
-		database.Feild{Name: "begin", Value: req.Begin},
-		database.Feild{Name: "current", Value: req.Begin},
+		database.Feild{Name: "start", Value: req.Start},
+		database.Feild{Name: "current", Value: req.Start},
+		database.Feild{Name: "interval", Value: req.Interval},
 	}
 
-	_, err := svc.db.Insert(nil, "", fields)
+	_, err := svc.db.Insert(nil, "ETH_TASK", fields)
 	return err
 }
 
@@ -70,8 +72,8 @@ func (svc *Service) TaskUpdate(ctx context.Context, req *bean.TaskUpdateRo) erro
 		database.Feild{Name: "abi", Value: req.Abi},
 		database.Feild{Name: "chainId", Value: req.ChainId},
 		database.Feild{Name: "rpc", Value: req.Rpc},
-		database.Feild{Name: "begin", Value: req.Begin},
-	}
+		database.Feild{Name: "start", Value: req.Start},
+		database.Feild{Name: "interval", Value: req.Interval}}
 
 	_, err := svc.db.Update(nil, "ETH_TASK", fields, where)
 	return err
@@ -84,7 +86,7 @@ func (svc *Service) TaskPause(ctx context.Context, req *bean.TaskPauseRo) error 
 	_, err := svc.db.Update(nil, "ETH_TASK", []database.Feild{
 		database.Feild{
 			Name:  "paused",
-			Value: 1,
+			Value: req.Pause,
 		},
 	}, where)
 	return err
@@ -94,7 +96,12 @@ func (svc *Service) TaskDelete(ctx context.Context, req *bean.TaskDeleteRo) erro
 	where := []database.Where{
 		database.Where{Name: "id", Value: req.Id},
 	}
-	_, err := svc.db.Delete(nil, "ETH_TASK", where)
+	_, err := svc.db.Update(nil, "ETH_TASK", []database.Feild{
+		database.Feild{
+			Name:  "deletedAt",
+			Value: time.Now().Unix(),
+		},
+	}, where)
 	return err
 }
 

@@ -35,7 +35,7 @@ func (hs *HttpServer) taskList(c echo.Context) error {
 // @Tags TASK
 // @Accept json
 // @Produce json
-// @Param Request query bean.TaskAddRo true "request param"
+// @Param Request body bean.TaskAddRo true "request param"
 // @Success 200 {object} bean.Resp "success"
 // @Router /v1/task/add [POST]
 func (hs *HttpServer) taskAdd(c echo.Context) error {
@@ -59,7 +59,7 @@ func (hs *HttpServer) taskAdd(c echo.Context) error {
 // @Tags TASK
 // @Accept json
 // @Produce json
-// @Param Request query bean.TaskPauseRo true "request param"
+// @Param Request body bean.TaskPauseRo true "request param"
 // @Success 200 {object} bean.Resp "success"
 // @Router /v1/task/pause [POST]
 func (hs *HttpServer) taskPause(c echo.Context) error {
@@ -83,7 +83,7 @@ func (hs *HttpServer) taskPause(c echo.Context) error {
 // @Tags TASK
 // @Accept json
 // @Produce json
-// @Param Request query bean.TaskDeleteRo true "request param"
+// @Param Request body bean.TaskDeleteRo true "request param"
 // @Success 200 {object} bean.Resp "success"
 // @Router /v1/task/delete [POST]
 func (hs *HttpServer) taskDelete(c echo.Context) error {
@@ -107,7 +107,7 @@ func (hs *HttpServer) taskDelete(c echo.Context) error {
 // @Tags TASK
 // @Accept json
 // @Produce json
-// @Param Request query bean.TaskUpdateRo true "request param"
+// @Param Request body bean.TaskUpdateRo true "request param"
 // @Success 200 {object} bean.Resp "success"
 // @Router /v1/task/update [POST]
 func (hs *HttpServer) taskUpdate(c echo.Context) error {

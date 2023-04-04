@@ -56,6 +56,71 @@ definitions:
       traceId:
         type: string
     type: object
+  bean.TaskAddRo:
+    properties:
+      abi:
+        type: string
+      chainId:
+        type: integer
+      contract:
+        type: string
+      interval:
+        description: 轮询间隔，建议为区块出块间隔
+        type: integer
+      rpc:
+        type: string
+      start:
+        type: integer
+    required:
+    - abi
+    - chainId
+    - contract
+    - interval
+    - rpc
+    - start
+    type: object
+  bean.TaskDeleteRo:
+    properties:
+      id:
+        type: integer
+    required:
+    - id
+    type: object
+  bean.TaskPauseRo:
+    properties:
+      id:
+        type: integer
+      pause:
+        type: integer
+    required:
+    - id
+    type: object
+  bean.TaskUpdateRo:
+    properties:
+      abi:
+        type: string
+      chainId:
+        type: integer
+      contract:
+        type: string
+      id:
+        type: integer
+      interval:
+        description: 轮询间隔，建议为区块出块间隔
+        type: integer
+      rpc:
+        type: string
+      start:
+        type: integer
+    required:
+    - abi
+    - chainId
+    - contract
+    - id
+    - interval
+    - rpc
+    - start
+    type: object
   bean.TimeRo:
     properties:
       begin:
@@ -79,8 +144,6 @@ definitions:
     properties:
       abi:
         type: string
-      begin:
-        type: integer
       chainId:
         type: integer
       contract:
@@ -91,11 +154,16 @@ definitions:
         type: integer
       id:
         type: integer
+      interval:
+        description: 区块轮询间隔
+        type: integer
       paused:
         description: 是否暂停
         type: integer
       rpc:
         type: string
+      start:
+        type: integer
       updatedAt:
         type: integer
     type: object
@@ -134,26 +202,12 @@ paths:
       - application/json
       description: 添加任务
       parameters:
-      - in: query
-        name: abi
+      - description: request param
+        in: body
+        name: Request
         required: true
-        type: string
-      - in: query
-        name: begin
-        required: true
-        type: integer
-      - in: query
-        name: chainId
-        required: true
-        type: integer
-      - in: query
-        name: contract
-        required: true
-        type: string
-      - in: query
-        name: rpc
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/bean.TaskAddRo'
       produces:
       - application/json
       responses:
@@ -170,10 +224,12 @@ paths:
       - application/json
       description: 删除任务
       parameters:
-      - in: query
-        name: id
+      - description: request param
+        in: body
+        name: Request
         required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/bean.TaskDeleteRo'
       produces:
       - application/json
       responses:
@@ -219,16 +275,12 @@ paths:
       - application/json
       description: 任务暂停与运行
       parameters:
-      - in: query
-        name: id
+      - description: request param
+        in: body
+        name: Request
         required: true
-        type: integer
-      - enum:
-        - 0
-        in: query
-        name: pause
-        required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/bean.TaskPauseRo'
       produces:
       - application/json
       responses:
@@ -245,30 +297,12 @@ paths:
       - application/json
       description: 更新任务
       parameters:
-      - in: query
-        name: abi
+      - description: request param
+        in: body
+        name: Request
         required: true
-        type: string
-      - in: query
-        name: begin
-        required: true
-        type: integer
-      - in: query
-        name: chainId
-        required: true
-        type: integer
-      - in: query
-        name: contract
-        required: true
-        type: string
-      - in: query
-        name: id
-        required: true
-        type: integer
-      - in: query
-        name: rpc
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/bean.TaskUpdateRo'
       produces:
       - application/json
       responses:

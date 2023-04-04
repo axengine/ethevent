@@ -10,12 +10,14 @@ type TaskAddRo struct {
 	Abi      string `query:"abi" validate:"required"`
 	ChainId  uint64 `query:"chainId" validate:"required,gt=0"`
 	Rpc      string `query:"rpc" validate:"required"`
-	Begin    uint64 `query:"begin" validate:"required,gt=0"`
+	Start    uint64 `query:"start" validate:"required,gt=0"`
+	// 轮询间隔，建议为区块出块间隔
+	Interval uint64 `query:"interval" validate:"required,gt=0"`
 }
 
 type TaskPauseRo struct {
 	Id    uint `json:"id" validate:"required,gt=0"`
-	Pause uint `json:"pause" validate:"required,oneof=0,1"`
+	Pause uint `json:"pause" validate:"omitempty"`
 }
 
 type TaskDeleteRo struct {
@@ -55,21 +57,5 @@ type EventListRo struct {
 	TimeRo   *TimeRo  `query:"timeRo" json:"timeRo" validate:"omitempty"`
 	PageRo   *PageRo  `query:"pageRo" json:"pageRo" validate:"required"`
 }
-
-//type EventListQueryRo struct {
-//	Contract    string `query:"contract" json:"contract" validate:"required,len=42,startswith=0x"`
-//	Event       string `query:"event" json:"event" validate:"required"`
-//	BlockNumber uint64 `query:"blockNumber" validate:"omitempty"`
-//	BlockHash   string `query:"blockHash" validate:"omitempty"`
-//	TxHash      string `query:"txHash" validate:"omitempty"`
-//	Begin       int64  `query:"begin" validate:"omitempty"`
-//	End         int64  `query:"end" validate:"omitempty"`
-//	Cursor      uint64 `query:"cursor" validate:"required,gte=0"`
-//	Limit       uint64 `query:"limit" validate:"required,lte=100,gte=1"`
-//
-//	// name && value 作为条件 可以传数组
-//	Name  string `query:"name" validate:"omitempty"`
-//	Value string `query:"value" validate:"omitempty"`
-//}
 
 type Event map[string]interface{}

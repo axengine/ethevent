@@ -12,11 +12,12 @@ type Task struct {
 	Abi       string `db:"abi"`
 	ChainId   uint64 `db:"chainId"`
 	Rpc       string `db:"rpc"`
-	Begin     uint64 `db:"begin"`
+	Interval  int64  `db:"interval"` // 区块轮询间隔
+	Start     uint64 `db:"start"`
 	Current   uint64 `db:"current"`
 	Paused    uint   `db:"paused"` // 是否暂停
-	DeletedAt uint64 `db:"deletedAt"`
-	UpdatedAt uint64 `db:"updatedAt"`
+	DeletedAt int64  `db:"deletedAt"`
+	UpdatedAt int64  `db:"updatedAt"`
 }
 
 func (t *Task) TablePrefix() string {

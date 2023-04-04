@@ -6,12 +6,13 @@ import (
 )
 
 var CreateTaskTableSQL = `CREATE TABLE IF NOT EXISTS ETH_TASK (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    contract  TEXT    NOT NULL,
-    abi       TEXT    NOT NULL,
-    chainId   INTEGER DEFAULT (0),
-    rpc       TEXT    NOT NULL,
-    [begin]   INTEGER DEFAULT (1),
+    [id]        INTEGER PRIMARY KEY AUTOINCREMENT,
+    [contract]  TEXT    NOT NULL,
+    [abi]       TEXT    NOT NULL,
+    [chainId]   INTEGER DEFAULT (0),
+    [rpc]       TEXT    NOT NULL,
+    [interval]  INTEGER DEFAULT (1),
+    [start]   INTEGER DEFAULT (1),
     [current] INTEGER DEFAULT (1),
     [paused]   INTEGER DEFAULT (0),
     [updatedAt] INTEGER DEFAULT (0),

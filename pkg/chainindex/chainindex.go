@@ -10,7 +10,6 @@ import (
 	"github.com/axengine/utils/log"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"math/big"
 	"strings"
@@ -38,79 +37,47 @@ func (ci *ChainIndex) Init() error {
 		return err
 	}
 
-	return ci.initTask()
+	return nil
 }
 
-func (ci *ChainIndex) initTaskLoop(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
-	tm := time.NewTimer(time.Second * 5)
-	for {
-		select {
-		case <-ctx.Done():
-			ci.logger.Info("initTaskLoop exit")
-			return
-		case <-tm.C:
-			if err := ci.initTask(); err != nil {
-				log.Logger.Error("initTask", zap.Error(err))
+func (ci *ChainIndex) initTask(task *model.Task) error {
+	var tablePrefix = fmt.Sprintf("EVENT_%d_", task.ID)
+	ins, err := abi.JSON(strings.NewReader(task.Abi))
+	if err != nil {
+		return err
+	}
+	for _, v := range ins.Events {
+		tableName := tablePrefix + strings.ToUpper(v.Name)
+		var createCols []string
+		var indexCols []string
+		for _, arg := range v.Inputs {
+			var tp string
+			// todo
+			switch arg.Type.T {
+			case abi.IntTy, abi.UintTy:
+				tp = "TEXT"
+			case abi.BoolTy:
+				tp = "BOOLEAN"
+			default:
+				tp = "TEXT"
 			}
-			tm.Reset(time.Second * 5)
+			createCols = append(createCols, fmt.Sprintf("%s %s", "["+strings.ToUpper(arg.Name)+"]", tp))
+			if arg.Indexed {
+				indexCols = append(indexCols, fmt.Sprintf(`%s`, strings.ToUpper(arg.Name)))
+			}
 		}
-	}
-}
 
-func (ci *ChainIndex) initTask() error {
-	var tasks []model.Task
-	where := []database.Where{{Name: "1", Value: 1}}
-	if err := ci.db.SelectRows("ETH_TASK", where, nil, nil, &tasks); err != nil {
-		return errors.Wrap(err, "initTask")
-	}
-
-	// create event table
-	for _, v := range tasks {
-		ci.mu.RLock()
-		_, ok := ci.tasks[v.ID]
-		ci.mu.RUnlock()
-		if ok {
-			continue
-		}
-		var tablePrefix = fmt.Sprintf("EVENT_%d_", v.ID)
-		ins, err := abi.JSON(strings.NewReader(v.Abi))
-		if err != nil {
+		ctsqls := model.CreateTableSQL(tableName, createCols)
+		if _, err := ci.db.Exec(nil, ctsqls); err != nil {
+			ci.logger.Error("Exec", zap.Error(err), zap.String("sql", ctsqls))
 			return err
 		}
-		for _, v := range ins.Events {
-			tableName := tablePrefix + strings.ToUpper(v.Name)
-			var createCols []string
-			var indexCols []string
-			for _, arg := range v.Inputs {
-				var tp string
-				// todo
-				switch arg.Type.T {
-				case abi.IntTy, abi.UintTy:
-					tp = "TEXT"
-				case abi.BoolTy:
-					tp = "BOOLEAN"
-				default:
-					tp = "TEXT"
-				}
-				createCols = append(createCols, fmt.Sprintf("%s %s", "["+strings.ToUpper(arg.Name)+"]", tp))
-				if arg.Indexed {
-					indexCols = append(indexCols, fmt.Sprintf(`%s`, strings.ToUpper(arg.Name)))
-				}
-			}
 
-			ctsqls := model.CreateTableSQL(tableName, createCols)
-			if _, err := ci.db.Exec(nil, ctsqls); err != nil {
-				ci.logger.Error("Exec", zap.Error(err), zap.String("sql", ctsqls))
+		cisqls := model.CreateIndexSQL(tableName, indexCols)
+		for _, v := range cisqls {
+			if _, err := ci.db.Exec(nil, v); err != nil {
+				ci.logger.Error("Exec", zap.Error(err), zap.String("sql", v))
 				return err
-			}
-
-			cisqls := model.CreateIndexSQL(tableName, indexCols)
-			for _, v := range cisqls {
-				if _, err := ci.db.Exec(nil, v); err != nil {
-					ci.logger.Error("Exec", zap.Error(err), zap.String("sql", v))
-					return err
-				}
 			}
 		}
 	}
@@ -120,9 +87,6 @@ func (ci *ChainIndex) initTask() error {
 
 func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
-
-	wg.Add(1)
-	go ci.initTaskLoop(ctx, wg)
 
 	tm := time.NewTimer(time.Second * 1)
 	for {
@@ -155,6 +119,10 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 					ci.tasks[task.ID] = &task
 					ci.mu.Unlock()
 
+					if err := ci.initTask(&task); err != nil {
+						log.Logger.Error("initTask", zap.Error(err), zap.Uint("task", task.ID))
+						continue
+					}
 					wg.Add(1)
 					go ci.start(ctx, wg, cli, &task)
 				}
@@ -199,11 +167,12 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 				ci.logger.Warn("BlockNumber", zap.Error(err))
 				continue
 			}
-			if t.Current < t.Begin {
-				t.Current = t.Begin
+			if t.Current < t.Start {
+				t.Current = t.Start
 			}
 			if t.Current >= number {
-				time.Sleep(time.Second)
+				next := time.Unix(t.UpdatedAt+t.Interval, 0)
+				time.Sleep(next.Sub(time.Now()))
 				continue
 			}
 			if t.Current < number {
