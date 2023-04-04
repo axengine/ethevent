@@ -32,8 +32,7 @@ jobs:
           make
           echo ${{ github.ref }}
           echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
-          echo "Tag name from github.ref_name: ${{  github.ref_name }}"
-          tar -cvf ethevent-linux-amd64-${{ github.ref_name }}.tar.gz -C ./build ./build/ethevent
+          tar -cvf ethevent-linux-amd64-${{ github.ref_name }}.tar.gz -C ./build ethevent
 
       - name: Create Release and Upload Release Asset
         uses: softprops/action-gh-release@v1
