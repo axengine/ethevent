@@ -13,8 +13,8 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
-	"time"
 )
 
 // @title eth-events API
@@ -24,17 +24,20 @@ import (
 // @BasePath /
 func main() {
 	dbo := database.New(filepath.Join(viper.GetString("datadir"), "ethevents.db"), log.Logger)
+
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+
 	ci := chainindex.New(log.Logger, dbo)
 	if err := ci.Init(); err != nil {
 		log.Logger.Panic("Init", zap.Error(err))
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	if err := ci.Start(ctx); err != nil {
-		log.Logger.Panic("Start", zap.Error(err))
-	}
+	wg.Add(1)
+	go ci.Start(ctx, &wg)
 
 	httpServer := http.New(svc.New(log.Logger, dbo))
-	go httpServer.Start(ctx, true, viper.GetInt("http.port"))
+	wg.Add(1)
+	go httpServer.Start(ctx, &wg, true, viper.GetInt("http.port"))
 
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
@@ -46,8 +49,8 @@ func main() {
 				log.Logger.Warn("http.Stop", zap.Error(err))
 			}
 		case <-ctx.Done():
+			wg.Wait()
 			log.Logger.Info("main exit")
-			time.Sleep(time.Second * 3)
 			os.Exit(0)
 		}
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
+	"sync"
 )
 
 type HttpServer struct {
@@ -20,7 +21,8 @@ func New(svc *svc.Service) *HttpServer {
 	return &HttpServer{svc: svc, ec: echo.New()}
 }
 
-func (hs *HttpServer) Start(ctx context.Context, dev bool, port int) {
+func (hs *HttpServer) Start(ctx context.Context, wg *sync.WaitGroup, dev bool, port int) {
+	defer wg.Done()
 	// set CORS
 	e := hs.ec
 	e.Validator = &validator.CustomValidator{}
@@ -43,7 +45,9 @@ func (hs *HttpServer) Start(ctx context.Context, dev bool, port int) {
 	// Start the echo v4 server on port 8080
 	fmt.Printf("Starting server on port %d\n", port)
 
-	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
+	if err := e.Start(fmt.Sprintf(":%d", port)); err != nil {
+		e.Logger.Error(err)
+	}
 }
 
 func (hs *HttpServer) Stop(ctx context.Context) error {

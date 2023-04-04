@@ -7,21 +7,26 @@ import (
 	"github.com/axengine/ethcli"
 	"github.com/axengine/ethevent/pkg/database"
 	"github.com/axengine/ethevent/pkg/model"
+	"github.com/axengine/utils/log"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 )
 
 type ChainIndex struct {
 	db     *database.DBO
 	logger *zap.Logger
+
+	tasks map[uint]*model.Task
 }
 
 func New(logger *zap.Logger, db *database.DBO) *ChainIndex {
-	return &ChainIndex{db: db, logger: logger}
+	return &ChainIndex{db: db, logger: logger, tasks: map[uint]*model.Task{}}
 }
 
 // Init initial table and index
@@ -32,10 +37,31 @@ func (ci *ChainIndex) Init() error {
 		return err
 	}
 
+	return ci.initTask()
+}
+
+func (ci *ChainIndex) initTaskLoop(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	tm := time.NewTimer(time.Second * 5)
+	for {
+		select {
+		case <-ctx.Done():
+			ci.logger.Info("initTaskLoop exit")
+			return
+		case <-tm.C:
+			if err := ci.initTask(); err != nil {
+				log.Logger.Error("initTask", zap.Error(err))
+			}
+			tm.Reset(time.Second * 5)
+		}
+	}
+}
+
+func (ci *ChainIndex) initTask() error {
 	var tasks []model.Task
 	where := []database.Where{{Name: "1", Value: 1}}
 	if err := ci.db.SelectRows("ETH_TASK", where, nil, nil, &tasks); err != nil {
-		panic(err)
+		return errors.Wrap(err, "initTask")
 	}
 
 	// create event table
@@ -85,24 +111,46 @@ func (ci *ChainIndex) Init() error {
 	return nil
 }
 
-func (ci *ChainIndex) Start(ctx context.Context) error {
-	var tasks []model.Task
-	where := []database.Where{{Name: "1", Value: 1}}
-	if err := ci.db.SelectRows("ETH_TASK", where, nil, nil, &tasks); err != nil {
-		return err
-	}
+func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-	for _, v := range tasks {
-		if cli, err := ethcli.New(v.Rpc); err != nil {
-			return err
-		} else {
-			go ci.start(ctx, cli, &v)
+	wg.Add(1)
+	go ci.initTaskLoop(ctx, wg)
+
+	tm := time.NewTimer(time.Second * 5)
+	for {
+		select {
+		case <-ctx.Done():
+			ci.logger.Info("Start exit")
+			return
+		case <-tm.C:
+			var tasks []model.Task
+			where := []database.Where{{Name: "1", Value: 1}}
+			if err := ci.db.SelectRows("ETH_TASK", where, nil, nil, &tasks); err != nil {
+				log.Logger.Error("SelectRows", zap.Error(err))
+				return
+			}
+
+			for _, v := range tasks {
+				if _, ok := ci.tasks[v.ID]; ok {
+					continue
+				}
+				if cli, err := ethcli.New(v.Rpc); err != nil {
+					log.Logger.Error("ethcli.New", zap.Error(err), zap.String("rpc", v.Rpc))
+					continue
+				} else {
+					ci.tasks[v.ID] = &v
+					wg.Add(1)
+					go ci.start(ctx, wg, cli, &v)
+				}
+			}
+			tm.Reset(time.Second * 5)
 		}
 	}
-	return nil
 }
 
-func (ci *ChainIndex) start(ctx context.Context, cli *ethcli.ETHCli, t *model.Task) {
+func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli.ETHCli, t *model.Task) {
+	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
