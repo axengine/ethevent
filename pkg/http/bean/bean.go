@@ -1,7 +1,7 @@
 package bean
 
 type PageRo struct {
-	Cursor uint64 `query:"cursor" validate:"required,gte=0"`
+	Cursor uint64 `query:"cursor" validate:""`
 	Limit  uint64 `query:"limit" validate:"required,lte=100,gte=1"`
 }
 

@@ -135,11 +135,9 @@ const docTemplate = `{
                 "summary": "查询任务列表",
                 "parameters": [
                     {
-                        "minimum": 0,
                         "type": "integer",
                         "name": "cursor",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "maximum": 100,
@@ -285,13 +283,11 @@ const docTemplate = `{
         "bean.PageRo": {
             "type": "object",
             "required": [
-                "cursor",
                 "limit"
             ],
             "properties": {
                 "cursor": {
-                    "type": "integer",
-                    "minimum": 0
+                    "type": "integer"
                 },
                 "limit": {
                     "type": "integer",

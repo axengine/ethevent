@@ -36,14 +36,12 @@ definitions:
   bean.PageRo:
     properties:
       cursor:
-        minimum: 0
         type: integer
       limit:
         maximum: 100
         minimum: 1
         type: integer
     required:
-    - cursor
     - limit
     type: object
   bean.Resp:
@@ -247,9 +245,7 @@ paths:
       description: 查询任务列表
       parameters:
       - in: query
-        minimum: 0
         name: cursor
-        required: true
         type: integer
       - in: query
         maximum: 100
