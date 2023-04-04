@@ -22,6 +22,7 @@ type ChainIndex struct {
 	db     *database.DBO
 	logger *zap.Logger
 
+	mu    sync.RWMutex
 	tasks map[uint]*model.Task
 }
 
@@ -66,6 +67,12 @@ func (ci *ChainIndex) initTask() error {
 
 	// create event table
 	for _, v := range tasks {
+		ci.mu.RLock()
+		_, ok := ci.tasks[v.ID]
+		ci.mu.RUnlock()
+		if ok {
+			continue
+		}
 		var tablePrefix = fmt.Sprintf("EVENT_%d_", v.ID)
 		ins, err := abi.JSON(strings.NewReader(v.Abi))
 		if err != nil {
@@ -117,7 +124,7 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go ci.initTaskLoop(ctx, wg)
 
-	tm := time.NewTimer(time.Second * 5)
+	tm := time.NewTimer(time.Second * 1)
 	for {
 		select {
 		case <-ctx.Done():
@@ -132,16 +139,24 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 			}
 
 			for _, v := range tasks {
-				if _, ok := ci.tasks[v.ID]; ok {
+				task := v
+				ci.mu.RLock()
+				_, ok := ci.tasks[task.ID]
+				ci.mu.RUnlock()
+				if ok {
 					continue
 				}
-				if cli, err := ethcli.New(v.Rpc); err != nil {
-					log.Logger.Error("ethcli.New", zap.Error(err), zap.String("rpc", v.Rpc))
+
+				if cli, err := ethcli.New(task.Rpc); err != nil {
+					log.Logger.Error("ethcli.New", zap.Error(err), zap.String("rpc", task.Rpc))
 					continue
 				} else {
-					ci.tasks[v.ID] = &v
+					ci.mu.Lock()
+					ci.tasks[task.ID] = &task
+					ci.mu.Unlock()
+
 					wg.Add(1)
-					go ci.start(ctx, wg, cli, &v)
+					go ci.start(ctx, wg, cli, &task)
 				}
 			}
 			tm.Reset(time.Second * 5)
