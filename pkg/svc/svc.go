@@ -39,9 +39,9 @@ func (svc *Service) TaskList(cursor, limit uint64, order string) ([]model.Task, 
 	return datas, nil
 }
 
-func (svc *Service) TaskAdd(ctx context.Context, req *bean.TaskAddRo) error {
+func (svc *Service) TaskAdd(ctx context.Context, req *bean.TaskAddRo) (int64, error) {
 	if _, err := abi.JSON(strings.NewReader(req.Abi)); err != nil {
-		return err
+		return 0, err
 	}
 
 	fields := []database.Feild{
@@ -54,8 +54,11 @@ func (svc *Service) TaskAdd(ctx context.Context, req *bean.TaskAddRo) error {
 		database.Feild{Name: "interval", Value: req.Interval},
 	}
 
-	_, err := svc.db.Insert(nil, "ETH_TASK", fields)
-	return err
+	result, err := svc.db.Insert(nil, "ETH_TASK", fields)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
 }
 
 func (svc *Service) TaskUpdate(ctx context.Context, req *bean.TaskUpdateRo) error {
@@ -106,15 +109,10 @@ func (svc *Service) TaskDelete(ctx context.Context, req *bean.TaskDeleteRo) erro
 }
 
 func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, error) {
-	task, err := svc.findTaskByContract(req.Contract)
-	if err != nil {
-		return nil, err
-	}
-	if task == nil || task.ID == 0 {
-		return nil, errors.New("Not found task")
-	}
-
-	tableName := fmt.Sprintf("EVENT_%d_%s", task.ID, req.Event)
+	var (
+		err       error
+		tableName = fmt.Sprintf("EVENT_%d_%s", req.TaskId, req.Event)
+	)
 
 	where := []database.Where{
 		database.Where{Name: "1", Value: 1},
@@ -147,7 +145,13 @@ func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, 
 		}
 	}
 
-	orderT, _ := database.MakeOrder("", "ID")
+	orderT, _ := database.MakeOrder("DESC", "ID")
+	if req.OrderRo.OrderType != "" {
+		orderT, err = database.MakeOrder(req.OrderRo.OrderType, req.OrderRo.Feilds...)
+		if err != nil {
+			return nil, errors.Wrap(err, "OrderParam")
+		}
+	}
 
 	var paging *database.Paging
 	if req.PageRo != nil {

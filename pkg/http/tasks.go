@@ -36,7 +36,7 @@ func (hs *HttpServer) taskList(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param Request body bean.TaskAddRo true "request param"
-// @Success 200 {object} bean.Resp "success"
+// @Success 200 {object} int64 "success"
 // @Router /v1/task/add [POST]
 func (hs *HttpServer) taskAdd(c echo.Context) error {
 	var req bean.TaskAddRo
@@ -46,11 +46,11 @@ func (hs *HttpServer) taskAdd(c echo.Context) error {
 	if err := c.Validate(req); err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
 	}
-	err := hs.svc.TaskAdd(context.Background(), &req)
+	taskId, err := hs.svc.TaskAdd(context.Background(), &req)
 	if err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}
-	return c.JSON(http.StatusOK, new(bean.Resp).Success(nil))
+	return c.JSON(http.StatusOK, new(bean.Resp).Success(taskId))
 }
 
 // taskPause

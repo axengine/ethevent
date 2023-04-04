@@ -14,12 +14,14 @@ definitions:
     properties:
       blockRo:
         $ref: '#/definitions/bean.BlockRo'
-      contract:
-        type: string
       event:
         type: string
+      orderRo:
+        $ref: '#/definitions/bean.OrderRo'
       pageRo:
         $ref: '#/definitions/bean.PageRo'
+      taskId:
+        type: integer
       timeRo:
         $ref: '#/definitions/bean.TimeRo'
       txRo:
@@ -29,9 +31,19 @@ definitions:
           $ref: '#/definitions/bean.Where'
         type: array
     required:
-    - contract
     - event
     - pageRo
+    - taskId
+    type: object
+  bean.OrderRo:
+    properties:
+      feilds:
+        items:
+          type: string
+        type: array
+      orderType:
+        description: ASC/DESC
+        type: string
     type: object
   bean.PageRo:
     properties:
@@ -212,7 +224,7 @@ paths:
         "200":
           description: success
           schema:
-            $ref: '#/definitions/bean.Resp'
+            type: integer
       summary: 添加任务
       tags:
       - TASK

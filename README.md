@@ -21,19 +21,18 @@ via:http://localhost:8080/docs/index.html
 ## example
 - Add a task:在BSC上解析USDT的Transfer事件，从26800040开始解析，解析间隔3秒
 ```shell
- curl 'http://localhost:8080/v1/task/add' \
-> -H "Content-Type:application/json" \
-> -X POST \
-> -d '{"abi":"[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\"
-:true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\
-":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"}]","chainId":56,"contract":"0x55d398326f99059fF775485246999027B3197955","interval":3,"rpc
-":"https://bsc-dataseed1.ninicoin.io/","start":26800040}'
+curl 'http://localhost:8080/v1/task/add' \
+	-H "Content-Type:application/json" \
+	-X POST \
+	-d '{"abi":"[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"],\"name\":\"Transfer\",\"type\":\"event\"}]","chainId":56,"contract":"0x55d398326f99059fF775485246999027B3197955","interval":56,"rpc":"https://bsc-dataseed1.ninicoin.io/","start":26800040}'
+
+{"resCode":0,"resDesc":"ok","result":1}
 ```
 
-- List event logs:查询`0x55d398326f99059fF775485246999027B3197955`合约的`Transfer`事件，分页采用游标，默认倒序，更多参数查看swag文档
+- List event logs:查询任务Id为`1`的`Transfer`事件，分页采用游标，默认倒序，更多参数查看swag文档
 ```shell
- curl 'http://localhost:8080/v1/task/add' \
-> -H "Content-Type:application/json" \
-> -X POST \
-> -d '{"contract":"0x55d398326f99059fF775485246999027B3197955","event":"Transfer","pageRo":{"cursor":0,"limit":100}}'
+curl 'http://localhost:8080/v1/event/list' \
+	-H "Content-Type:application/json" \
+	-X POST \
+	-d '{"taskId":1,"event":"Transfer","pageRo":{"cursor":0,"limit":100}}'
 ```

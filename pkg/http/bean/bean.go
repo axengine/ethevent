@@ -48,14 +48,21 @@ type Where struct {
 	Value string `query:"value" validate:"omitempty"`
 }
 
+type OrderRo struct {
+	// ASC/DESC
+	OrderType string   `query:"orderType" validate:"omitempty"`
+	Feilds    []string `query:"feilds" validate:"omitempty"`
+}
+
 type EventListRo struct {
-	Contract string   `query:"contract" json:"contract" validate:"required,len=42,startswith=0x"`
-	Event    string   `query:"event" json:"event" validate:"required,gt=0"`
-	Where    []Where  `query:"where" json:"where" validate:"omitempty"`
-	BlockRo  *BlockRo `query:"blockRo" json:"blockRo" validate:"omitempty"`
-	TxRo     *TxRo    `query:"txRo" json:"txRo" validate:"omitempty"`
-	TimeRo   *TimeRo  `query:"timeRo" json:"timeRo" validate:"omitempty"`
-	PageRo   *PageRo  `query:"pageRo" json:"pageRo" validate:"required"`
+	TaskId  uint     `query:"taskId" json:"taskId" validate:"required,gt=0"`
+	Event   string   `query:"event" json:"event" validate:"required,gt=0"`
+	Where   []Where  `query:"where" json:"where" validate:"omitempty"`
+	BlockRo *BlockRo `query:"blockRo" json:"blockRo" validate:"omitempty"`
+	TxRo    *TxRo    `query:"txRo" json:"txRo" validate:"omitempty"`
+	TimeRo  *TimeRo  `query:"timeRo" json:"timeRo" validate:"omitempty"`
+	PageRo  *PageRo  `query:"pageRo" json:"pageRo" validate:"required"`
+	OrderRo OrderRo  `query:"orderRo" json:"orderRo" validate:"omitempty"`
 }
 
 type Event map[string]interface{}

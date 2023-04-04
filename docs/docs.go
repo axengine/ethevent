@@ -80,7 +80,7 @@ const docTemplate = `{
                     "200": {
                         "description": "success",
                         "schema": {
-                            "$ref": "#/definitions/bean.Resp"
+                            "type": "integer"
                         }
                     }
                 }
@@ -249,22 +249,25 @@ const docTemplate = `{
         "bean.EventListRo": {
             "type": "object",
             "required": [
-                "contract",
                 "event",
-                "pageRo"
+                "pageRo",
+                "taskId"
             ],
             "properties": {
                 "blockRo": {
                     "$ref": "#/definitions/bean.BlockRo"
                 },
-                "contract": {
-                    "type": "string"
-                },
                 "event": {
                     "type": "string"
                 },
+                "orderRo": {
+                    "$ref": "#/definitions/bean.OrderRo"
+                },
                 "pageRo": {
                     "$ref": "#/definitions/bean.PageRo"
+                },
+                "taskId": {
+                    "type": "integer"
                 },
                 "timeRo": {
                     "$ref": "#/definitions/bean.TimeRo"
@@ -277,6 +280,21 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/bean.Where"
                     }
+                }
+            }
+        },
+        "bean.OrderRo": {
+            "type": "object",
+            "properties": {
+                "feilds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "orderType": {
+                    "description": "ASC/DESC",
+                    "type": "string"
                 }
             }
         },
