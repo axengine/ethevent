@@ -24,7 +24,7 @@ via:http://localhost:8080/docs/index.html
 curl 'http://localhost:8080/v1/task/add' \
 	-H "Content-Type:application/json" \
 	-X POST \
-	-d '{"abi":"[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"],\"name\":\"Transfer\",\"type\":\"event\"}]","chainId":56,"contract":"0x55d398326f99059fF775485246999027B3197955","interval":3,"rpc":"https://bsc-dataseed1.ninicoin.io/","start":26800040}'
+	-d '{"abi":"[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"}]","chainId":56,"contract":"0x55d398326f99059fF775485246999027B3197955","interval":3,"rpc":"https://bsc-dataseed1.ninicoin.io/","start":26800040}'
 
 {"resCode":0,"resDesc":"ok","result":1}
 ```
