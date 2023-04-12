@@ -97,7 +97,7 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 		case <-tm.C:
 			var tasks []model.Task
 			where := []database.Where{{Name: "1", Value: 1}}
-			if err := ci.db.SelectRows("ETH_TASK", where, nil, nil, &tasks); err != nil {
+			if err := ci.db.SelectRows("ETH_TASK", nil, where, nil, nil, &tasks); err != nil {
 				log.Logger.Error("SelectRows", zap.Error(err))
 				return
 			}
@@ -145,7 +145,7 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 				{Name: "1", Value: 1},
 				{Name: "ID", Value: t.ID},
 			}
-			if err := ci.db.SelectRows("ETH_TASK", where, nil, nil, &tasks); err != nil {
+			if err := ci.db.SelectRows("ETH_TASK", nil, where, nil, nil, &tasks); err != nil {
 				ci.logger.Error("SelectRows", zap.Error(err))
 				return
 			}

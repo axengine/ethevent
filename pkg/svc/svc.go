@@ -33,7 +33,7 @@ func (svc *Service) TaskList(cursor, limit uint64, order string) ([]model.Task, 
 		return nil, err
 	}
 	p := database.MakePaging("id", cursor, limit)
-	if err := svc.db.SelectRows("ETH_TASK", where, o, p, &datas); err != nil {
+	if err := svc.db.SelectRows("ETH_TASK", nil, where, o, p, &datas); err != nil {
 		return nil, err
 	}
 	return datas, nil
@@ -167,7 +167,7 @@ func (svc *Service) findTaskByContract(contract string) (*model.Task, error) {
 		database.Where{Name: "Contract", Value: contract},
 	}
 
-	if err := svc.db.SelectRows("ETH_TASK", where, nil, nil, &datas); err != nil {
+	if err := svc.db.SelectRows("ETH_TASK", nil, where, nil, nil, &datas); err != nil {
 		return nil, err
 	}
 	if len(datas) > 0 {

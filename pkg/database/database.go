@@ -176,7 +176,7 @@ func (dbo *DBO) Update(tx *sql.Tx, table string, toupdate []Feild, where []Where
 	return res, err
 }
 
-func (dbo *DBO) SelectRowsUnion(table string, wheres [][]Where, order *Order, paging *Paging, result interface{}) error {
+func (dbo *DBO) SelectRowsUnion(table string, cols []string, wheres [][]Where, order *Order, paging *Paging, result interface{}) error {
 	if table == "" {
 		return errors.New("table name is required")
 	}
@@ -201,7 +201,12 @@ func (dbo *DBO) SelectRowsUnion(table string, wheres [][]Where, order *Order, pa
 			values = append(values, v.Value)
 		}
 
-		sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+		if len(cols) > 0 {
+			sqlBuff.WriteString(fmt.Sprintf("select %s from %s where 1 = 1", strings.Join(cols, ","), table))
+		} else {
+			sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+		}
+
 		for i := 0; i < len(where); i++ {
 			sqlBuff.WriteString(fmt.Sprintf(" and %s %s ? ", where[i].Name, where[i].GetOp()))
 		}
@@ -226,7 +231,7 @@ func (dbo *DBO) SelectRowsUnion(table string, wheres [][]Where, order *Order, pa
 }
 
 // SelectRows select rows to struct slice
-func (dbo *DBO) SelectRows(table string, where []Where, order *Order, paging *Paging, result interface{}) error {
+func (dbo *DBO) SelectRows(table string, cols []string, where []Where, order *Order, paging *Paging, result interface{}) error {
 	if table == "" {
 		return errors.New("table name is required")
 	}
@@ -243,7 +248,11 @@ func (dbo *DBO) SelectRows(table string, where []Where, order *Order, paging *Pa
 	}
 
 	var sqlBuff bytes.Buffer
-	sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+	if len(cols) > 0 {
+		sqlBuff.WriteString(fmt.Sprintf("select %s from %s where 1 = 1", strings.Join(cols, ","), table))
+	} else {
+		sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+	}
 	for i := 0; i < len(where); i++ {
 		sqlBuff.WriteString(fmt.Sprintf(" and %s %s ? ", where[i].Name, where[i].GetOp()))
 	}
@@ -341,7 +350,7 @@ func (dbo *DBO) SelectRowsToMaps(table string, cols []string, where []Where, ord
 }
 
 // SelectRowsOffset select rows to struct slice
-func (dbo *DBO) SelectRowsOffset(table string, where []Where, order *Order, offset, limit uint64, result interface{}) error {
+func (dbo *DBO) SelectRowsOffset(table string, cols []string, where []Where, order *Order, offset, limit uint64, result interface{}) error {
 	if table == "" {
 		return errors.New("table name is required")
 	}
@@ -358,7 +367,11 @@ func (dbo *DBO) SelectRowsOffset(table string, where []Where, order *Order, offs
 	}
 
 	var sqlBuff bytes.Buffer
-	sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+	if len(cols) > 0 {
+		sqlBuff.WriteString(fmt.Sprintf("select %s from %s where 1 = 1", strings.Join(cols, ","), table))
+	} else {
+		sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+	}
 	for i := 0; i < len(where); i++ {
 		sqlBuff.WriteString(fmt.Sprintf(" and %s %s ? ", where[i].Name, where[i].GetOp()))
 	}
