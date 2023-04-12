@@ -57,6 +57,7 @@ type OrderRo struct {
 type EventListRo struct {
 	TaskId  uint     `query:"taskId" json:"taskId" validate:"required,gt=0"`
 	Event   string   `query:"event" json:"event" validate:"required,gt=0"`
+	Cols    []string `query:"cols" json:"cols" validate:"omitempty"`
 	Where   []Where  `query:"where" json:"where" validate:"omitempty"`
 	BlockRo *BlockRo `query:"blockRo" json:"blockRo" validate:"omitempty"`
 	TxRo    *TxRo    `query:"txRo" json:"txRo" validate:"omitempty"`

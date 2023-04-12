@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
+	"strings"
 )
 
 type DBO struct {
@@ -274,7 +275,7 @@ func (dbo *DBO) SelectRows(table string, where []Where, order *Order, paging *Pa
 }
 
 // SelectRowsToMaps select rows to map slice
-func (dbo *DBO) SelectRowsToMaps(table string, where []Where, order *Order, paging *Paging) ([]map[string]interface{}, error) {
+func (dbo *DBO) SelectRowsToMaps(table string, cols []string, where []Where, order *Order, paging *Paging) ([]map[string]interface{}, error) {
 	if table == "" {
 		return nil, errors.New("table name is required")
 	}
@@ -291,7 +292,11 @@ func (dbo *DBO) SelectRowsToMaps(table string, where []Where, order *Order, pagi
 	}
 
 	var sqlBuff bytes.Buffer
-	sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+	if len(cols) > 0 {
+		sqlBuff.WriteString(fmt.Sprintf("select %s from %s where 1 = 1", strings.Join(cols, ","), table))
+	} else {
+		sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+	}
 	for i := 0; i < len(where); i++ {
 		sqlBuff.WriteString(fmt.Sprintf(" and %s %s ? ", where[i].Name, where[i].GetOp()))
 	}

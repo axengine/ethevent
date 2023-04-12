@@ -158,7 +158,7 @@ func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, 
 		paging = database.MakePaging("ID", req.PageRo.Cursor, req.PageRo.Limit)
 	}
 
-	return svc.db.SelectRowsToMaps(tableName, where, orderT, paging)
+	return svc.db.SelectRowsToMaps(tableName, req.Cols, where, orderT, paging)
 }
 
 func (svc *Service) findTaskByContract(contract string) (*model.Task, error) {
