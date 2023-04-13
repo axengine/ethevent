@@ -119,7 +119,7 @@ func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, 
 	}
 	for _, v := range req.Where {
 		if v.Name != "" && v.Value != "" {
-			where = append(where, database.Where{Name: v.Name, Value: v.Value})
+			where = append(where, database.Where{Name: v.Name, Value: v.Value, Op: v.Op})
 		}
 	}
 
@@ -146,7 +146,7 @@ func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, 
 	}
 
 	orderT, _ := database.MakeOrder("DESC", "ID")
-	if req.OrderRo.OrderType != "" {
+	if req.OrderRo != nil && req.OrderRo.OrderType != "" {
 		orderT, err = database.MakeOrder(req.OrderRo.OrderType, req.OrderRo.Feilds...)
 		if err != nil {
 			return nil, errors.Wrap(err, "OrderParam")

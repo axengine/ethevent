@@ -14,6 +14,10 @@ definitions:
     properties:
       blockRo:
         $ref: '#/definitions/bean.BlockRo'
+      cols:
+        items:
+          type: string
+        type: array
       event:
         type: string
       orderRo:
@@ -43,6 +47,9 @@ definitions:
         type: array
       orderType:
         description: ASC/DESC
+        enum:
+        - ASC
+        - DESC
         type: string
     type: object
   bean.PageRo:
@@ -146,6 +153,9 @@ definitions:
   bean.Where:
     properties:
       name:
+        type: string
+      op:
+        description: can be =、>、<、<> and any operator supported by sql-database
         type: string
       value:
         type: string

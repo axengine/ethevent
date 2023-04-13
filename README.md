@@ -36,3 +36,66 @@ curl 'http://localhost:8080/v1/event/list' \
 	-X POST \
 	-d '{"taskId":1,"event":"Transfer","pageRo":{"cursor":0,"limit":100}}'
 ```
+
+## /v1/event/list request
+```
+type BlockRo struct {
+	Number uint64 `query:"number" validate:"omitempty"`
+	Hash   string `query:"hash" validate:"omitempty"`
+}
+
+type TxRo struct {
+	Hash string `query:"hash" validate:"omitempty"`
+}
+
+type TimeRo struct {
+	Begin int64 `query:"begin" validate:"omitempty"`
+	End   int64 `query:"end" validate:"omitempty"`
+}
+
+type Where struct {
+	Name  string `query:"name" validate:"omitempty"`
+	Value string `query:"value" validate:"omitempty"`
+}
+
+type OrderRo struct {
+	OrderType string   `query:"orderType" validate:"omitempty,oneof=ASC DESC"`
+	Feilds    []string `query:"feilds" validate:"omitempty"`
+}
+
+type EventListRo struct {
+	TaskId  uint     `query:"taskId" json:"taskId" validate:"required,gt=0"`
+	Event   string   `query:"event" json:"event" validate:"required,gt=0"`
+	Cols    []string `query:"cols" json:"cols" validate:"omitempty"`
+	Where   []Where  `query:"where" json:"where" validate:"omitempty"`
+	BlockRo *BlockRo `query:"blockRo" json:"blockRo" validate:"omitempty"`
+	TxRo    *TxRo    `query:"txRo" json:"txRo" validate:"omitempty"`
+	TimeRo  *TimeRo  `query:"timeRo" json:"timeRo" validate:"omitempty"`
+	PageRo  *PageRo  `query:"pageRo" json:"pageRo" validate:"required"`
+	OrderRo *OrderRo `query:"orderRo" json:"orderRo" validate:"omitempty"`
+}
+```
+- taskId 和 event是要求必传的，pageRo只在查询`记录`时用于分页，是必传项。
+- cols可以指定要查询的字段，所有事件初了事件本身的字段外，还包含以下公共字段:
+```
+type EventBase struct {
+	ID      int64  `json:"id"`
+	Address string `json:"address"`
+	//Topics      []string `json:"topics"`
+	//Data        []byte   `json:"data"`
+	BlockNumber uint64 `json:"blockNumber"`
+	BlockHash   string `json:"blockHash"`
+	BlockTime   int64  `json:"blockTime"`
+	TxHash      string `json:"txHash"`
+	TxIndex     uint   `json:"txIndex"`
+	//LogIndex uint `json:"logIndex"`
+	Removed bool `json:"removed"`
+}
+```
+cols字段支持统计字段，例如：`sum(value)`,`avg(value)`,`count(*)`等sql可查询的字段
+- where 指定自定义查询条件，例如:Name="from" Value="0xe5DaF2824B43d8b0C961225Ab9992baf39F5F835" Op="="
+- blockRo 区块高度和hash
+- timeRo 区块时间
+- txRo 交易hash
+- pageRo 游标分页
+- orderRo 排序，默认`ID DESC`

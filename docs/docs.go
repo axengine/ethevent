@@ -257,6 +257,12 @@ const docTemplate = `{
                 "blockRo": {
                     "$ref": "#/definitions/bean.BlockRo"
                 },
+                "cols": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "event": {
                     "type": "string"
                 },
@@ -294,7 +300,11 @@ const docTemplate = `{
                 },
                 "orderType": {
                     "description": "ASC/DESC",
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "ASC",
+                        "DESC"
+                    ]
                 }
             }
         },
@@ -445,6 +455,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "name": {
+                    "type": "string"
+                },
+                "op": {
+                    "description": "can be =、\u003e、\u003c、\u003c\u003e and any operator supported by sql-database",
                     "type": "string"
                 },
                 "value": {

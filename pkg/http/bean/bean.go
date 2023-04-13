@@ -1,7 +1,7 @@
 package bean
 
 type PageRo struct {
-	Cursor uint64 `query:"cursor" validate:""`
+	Cursor uint64 `query:"cursor" validate:"omitempty"`
 	Limit  uint64 `query:"limit" validate:"required,lte=100,gte=1"`
 }
 
@@ -46,11 +46,12 @@ type TimeRo struct {
 type Where struct {
 	Name  string `query:"name" validate:"omitempty"`
 	Value string `query:"value" validate:"omitempty"`
+	Op    string `query:"op" validate:"omitempty"` // can be =、>、<、<> and any operator supported by sql-database
 }
 
 type OrderRo struct {
 	// ASC/DESC
-	OrderType string   `query:"orderType" validate:"omitempty"`
+	OrderType string   `query:"orderType" validate:"omitempty,oneof=ASC DESC"`
 	Feilds    []string `query:"feilds" validate:"omitempty"`
 }
 
@@ -63,7 +64,7 @@ type EventListRo struct {
 	TxRo    *TxRo    `query:"txRo" json:"txRo" validate:"omitempty"`
 	TimeRo  *TimeRo  `query:"timeRo" json:"timeRo" validate:"omitempty"`
 	PageRo  *PageRo  `query:"pageRo" json:"pageRo" validate:"required"`
-	OrderRo OrderRo  `query:"orderRo" json:"orderRo" validate:"omitempty"`
+	OrderRo *OrderRo `query:"orderRo" json:"orderRo" validate:"omitempty"`
 }
 
 type Event map[string]interface{}
