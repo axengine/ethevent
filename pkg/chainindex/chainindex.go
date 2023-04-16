@@ -10,6 +10,7 @@ import (
 	"github.com/axengine/utils/log"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"math/big"
 	"strings"
@@ -213,12 +214,6 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 					continue
 				}
 
-				indexed := rcptLog.Topics[1:]
-				unindexed, err := event.Inputs.Unpack(rcptLog.Data)
-				if err != nil {
-					return err
-				}
-
 				eventAddress := rcptLog.Address.Hex()
 				if eventAddress != common.HexToAddress(t.Contract).Hex() {
 					continue
@@ -268,6 +263,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 						Value: rcptLog.Removed,
 					})
 				}
+
 				// 索引参数和非索引参数在旧版本solidity中可以乱序
 				var indexedParams = make(map[string]interface{})
 				var indexedArgs = make([]abi.Argument, 0)
@@ -277,27 +273,39 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 					}
 				}
 
-				if err := abi.ParseTopicsIntoMap(indexedParams, indexedArgs, indexed); err != nil {
-					return err
-				}
-				for k, v := range indexedParams {
-					if vv, ok := v.(fmt.Stringer); ok {
-						v = vv.String()
+				// 索引参数
+				indexed := rcptLog.Topics[1:]
+				if len(indexed) > 0 {
+					if err := abi.ParseTopicsIntoMap(indexedParams, indexedArgs, indexed); err != nil {
+						return err
 					}
-					cols = append(cols, database.Feild{
-						Name:  k,
-						Value: v,
-					})
+					for k, v := range indexedParams {
+						if vv, ok := v.(fmt.Stringer); ok {
+							v = vv.String()
+						}
+						cols = append(cols, database.Feild{
+							Name:  k,
+							Value: v,
+						})
+					}
 				}
 
-				for i, v := range event.Inputs.NonIndexed() {
-					if vv, ok := unindexed[i].(fmt.Stringer); ok {
-						unindexed[i] = vv.String()
+				// 非索引参数
+				if len(rcptLog.Data) > 0 {
+					unindexed, err := event.Inputs.Unpack(rcptLog.Data)
+					if err != nil {
+						return errors.Wrap(err, "event.Inputs.Unpack tx:"+tx.Hash().Hex())
 					}
-					cols = append(cols, database.Feild{
-						Name:  v.Name,
-						Value: unindexed[i],
-					})
+
+					for i, v := range event.Inputs.NonIndexed() {
+						if vv, ok := unindexed[i].(fmt.Stringer); ok {
+							unindexed[i] = vv.String()
+						}
+						cols = append(cols, database.Feild{
+							Name:  v.Name,
+							Value: unindexed[i],
+						})
+					}
 				}
 
 				events = append(events, Event{
