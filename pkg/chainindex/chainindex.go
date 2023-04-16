@@ -199,9 +199,9 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 	var events []Event
 
 	for _, tx := range block.Transactions() {
-		if tx.To() == nil || tx.To().Hex() != common.HexToAddress(t.Contract).String() {
-			continue
-		}
+		//if tx.To() == nil || tx.To().Hex() != common.HexToAddress(t.Contract).String() {
+		//	continue
+		//}
 
 		if receipt, err := cli.TransactionReceipt(ctx, tx.Hash()); err != nil {
 			return err
@@ -219,11 +219,16 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 					return err
 				}
 
+				eventAddress := rcptLog.Address.Hex()
+				if eventAddress != common.HexToAddress(t.Contract).Hex() {
+					continue
+				}
+
 				var cols []database.Feild
 				{
 					cols = append(cols, database.Feild{
 						Name:  "Address",
-						Value: rcptLog.Address.Hex(),
+						Value: eventAddress,
 					})
 					//cols = append(cols, database.Feild{
 					//	Name:  "Topics",
