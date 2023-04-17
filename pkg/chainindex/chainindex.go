@@ -3,6 +3,7 @@ package chainindex
 import (
 	"context"
 	"database/sql"
+	"encoding/binary"
 	"fmt"
 	"github.com/axengine/ethcli"
 	"github.com/axengine/ethevent/pkg/database"
@@ -181,6 +182,7 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 					ci.logger.Error("handleNumber", zap.Error(err), zap.Uint64("chain", t.ChainId))
 					continue
 				}
+				ci.logger.Info("handleNumber", zap.Uint("task", t.ID), zap.Uint64("height", t.Current+1))
 			}
 		}
 	}
@@ -225,14 +227,6 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 						Name:  "Address",
 						Value: eventAddress,
 					})
-					//cols = append(cols, database.Feild{
-					//	Name:  "Topics",
-					//	Value: v.Topics,
-					//})
-					//cols = append(cols, database.Feild{
-					//	Name:  "Data",
-					//	Value: v.Data,
-					//})
 					cols = append(cols, database.Feild{
 						Name:  "BlockNumber",
 						Value: rcptLog.BlockNumber,
@@ -253,14 +247,9 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 						Name:  "TxIndex",
 						Value: rcptLog.TxIndex,
 					})
-
-					//cols = append(cols, database.Feild{
-					//	Name:  "Index",
-					//	Value: v.Index,
-					//})
 					cols = append(cols, database.Feild{
-						Name:  "Removed",
-						Value: rcptLog.Removed,
+						Name:  "Method",
+						Value: binary.BigEndian.Uint32(tx.Data()[:4]),
 					})
 				}
 

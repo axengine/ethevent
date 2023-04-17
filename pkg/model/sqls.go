@@ -25,15 +25,12 @@ func CreateTableSQL(tableTame string, cols []string) string {
 	(
 		ID          INTEGER      PRIMARY KEY AUTOINCREMENT,
 		Address     STRING (42),
-		-- Topics      TEXT,
-		-- Data        BLOB,
 		BlockHash   VARCHAR (66),
 		BlockNumber INTEGER,
 		BlockTime   TIME,
 		TxHash      VARCHAR (66),
-		TxIndex     INTEGER,
-		--[Index]     INTEGER,
-		Removed     BOOLEAN,
+    	TxIndex     INTEGER,
+    	[Method]    INTEGER,
     %s
 	);`, tableTame, strings.Join(cols, ","))
 }

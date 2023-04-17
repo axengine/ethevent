@@ -39,15 +39,12 @@ func (t *Task) TableNames() map[string]string {
 }
 
 type EventBase struct {
-	ID      int64  `json:"id"`
-	Address string `json:"address"`
-	//Topics      []string `json:"topics"`
-	//Data        []byte   `json:"data"`
+	ID          int64  `json:"id"`
+	Address     string `json:"address"`
 	BlockNumber uint64 `json:"blockNumber"`
 	BlockHash   string `json:"blockHash"`
 	BlockTime   int64  `json:"blockTime"`
 	TxHash      string `json:"txHash"`
 	TxIndex     uint   `json:"txIndex"`
-	//LogIndex uint `json:"logIndex"`
-	Removed bool `json:"removed"`
+	Method      uint32 `json:"method"`
 }

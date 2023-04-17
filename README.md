@@ -79,17 +79,14 @@ type EventListRo struct {
 - cols可以指定要查询的字段，所有事件初了事件本身的字段外，还包含以下公共字段:
 ```
 type EventBase struct {
-	ID      int64  `json:"id"`
-	Address string `json:"address"`
-	//Topics      []string `json:"topics"`
-	//Data        []byte   `json:"data"`
+	ID          int64  `json:"id"`
+	Address     string `json:"address"`
 	BlockNumber uint64 `json:"blockNumber"`
 	BlockHash   string `json:"blockHash"`
 	BlockTime   int64  `json:"blockTime"`
 	TxHash      string `json:"txHash"`
 	TxIndex     uint   `json:"txIndex"`
-	//LogIndex uint `json:"logIndex"`
-	Removed bool `json:"removed"`
+	Method      uint32 `json:"method"` // transaction method
 }
 ```
 cols字段支持统计字段，例如：`sum(value)`,`avg(value)`,`count(*)`等sql可查询的字段
