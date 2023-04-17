@@ -178,11 +178,22 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 				continue
 			}
 			if t.Current < number {
-				if err := ci.handleNumber(ctx, cli, t.Current+1, t); err != nil {
-					ci.logger.Error("handleNumber", zap.Error(err), zap.Uint64("chain", t.ChainId))
+				if err := ci.db.Transaction(func(tx *sql.Tx) error {
+					if err := ci.handleNumber(ctx, cli, tx, t.Current+1, t); err != nil {
+						ci.logger.Error("handleNumber", zap.Error(err), zap.Uint64("chain", t.ChainId))
+						return err
+					}
+					if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
+						number, time.Now().Unix(), t.ID); err != nil {
+						return err
+					}
+					return nil
+				}); err != nil {
+					ci.logger.Error("handleNumber", zap.Error(err))
 					continue
 				}
-				ci.logger.Info("handleNumber", zap.Uint("task", t.ID), zap.Uint64("height", t.Current+1))
+				t.Current = number
+				ci.logger.Info("handleNumber", zap.Uint("task", t.ID), zap.Uint64("height", t.Current))
 			}
 		}
 	}
@@ -193,10 +204,14 @@ type Event struct {
 	Cols  []database.Feild
 }
 
-func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, number uint64, t *model.Task) error {
+func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, tx *sql.Tx, number uint64, t *model.Task) error {
 	block, err := cli.BlockByNumber(ctx, big.NewInt(int64(number)))
 	if err != nil {
 		return err
+	}
+	// filter address AND topics
+	if !block.Bloom().Test(common.HexToAddress(t.Contract).Bytes()) {
+		return nil
 	}
 
 	var events []Event
@@ -209,6 +224,9 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 		if receipt, err := cli.TransactionReceipt(ctx, tx.Hash()); err != nil {
 			return err
 		} else {
+			if !receipt.Bloom.Test(common.HexToAddress(t.Contract).Bytes()) {
+				return nil
+			}
 			ins, _ := abi.JSON(strings.NewReader(t.Abi))
 			for _, rcptLog := range receipt.Logs {
 				event, err := ins.EventByID(rcptLog.Topics[0])
@@ -305,18 +323,10 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, numb
 		}
 	}
 
-	return ci.db.Transaction(func(tx *sql.Tx) error {
-		for _, v := range events {
-			if _, err := ci.db.Insert(tx, v.Table, v.Cols); err != nil {
-				return err
-			}
-		}
-		if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
-			number, time.Now().Unix(), t.ID); err != nil {
+	for _, v := range events {
+		if _, err := ci.db.Insert(tx, v.Table, v.Cols); err != nil {
 			return err
 		}
-		t.Current = number
-		return nil
-	})
-
+	}
+	return nil
 }
