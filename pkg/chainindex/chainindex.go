@@ -113,6 +113,7 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 					continue
 				}
 
+				log.Logger.Info("init new task", zap.Uint("id", task.ID))
 				if cli, err := ethcli.New(task.Rpc); err != nil {
 					log.Logger.Error("ethcli.New", zap.Error(err), zap.String("rpc", task.Rpc))
 					continue
@@ -155,11 +156,11 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 				t = &tasks[0]
 			}
 			if t.DeletedAt > 0 {
-				ci.logger.Debug("Task Deleted", zap.Uint("id", t.ID))
+				ci.logger.Info("Task Deleted", zap.Uint("id", t.ID))
 				return
 			}
 			if t.Paused == 1 {
-				ci.logger.Debug("Task Paused", zap.Uint("id", t.ID))
+				ci.logger.Info("Task Paused", zap.Uint("id", t.ID))
 				time.Sleep(time.Second * 5)
 				continue
 			}

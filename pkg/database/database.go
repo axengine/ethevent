@@ -230,6 +230,69 @@ func (dbo *DBO) SelectRowsUnion(table string, cols []string, wheres [][]Where, o
 	return dbo.conn.Select(result, sqlBuff.String(), values...)
 }
 
+func (dbo *DBO) SelectRowsUnionToMaps(table string, cols []string, wheres [][]Where, order *Order, paging *Paging) ([]map[string]interface{}, error) {
+	if table == "" {
+		return nil, errors.New("table name is required")
+	}
+	if len(wheres) == 0 {
+		return nil, errors.New("full-table-select is not allowed")
+	}
+	if order != nil && (len(order.Feilds) == 0 || order.Type == "") {
+		return nil, errors.New("order type and fields is required")
+	}
+
+	var values []interface{}
+	wheresLen := len(wheres)
+	var sqlBuff bytes.Buffer
+
+	for _, where := range wheres {
+		wheresLen--
+		for _, v := range where {
+			values = append(values, v.Value)
+		}
+
+		if len(cols) > 0 {
+			sqlBuff.WriteString(fmt.Sprintf("select %s from %s where 1 = 1", strings.Join(cols, ","), table))
+		} else {
+			sqlBuff.WriteString(fmt.Sprintf("select * from %s where 1 = 1", table))
+		}
+
+		for i := 0; i < len(where); i++ {
+			sqlBuff.WriteString(fmt.Sprintf(" and %s %s ? ", where[i].Name, where[i].GetOp()))
+		}
+		if wheresLen > 0 {
+			sqlBuff.WriteString(" union ")
+		}
+	}
+
+	if order != nil {
+		// append order by clause for ordering
+		sqlBuff.WriteString(fmt.Sprintf(" order by %s ", order.Feilds[0]))
+		for i := 1; i < len(order.Feilds); i++ {
+			sqlBuff.WriteString(fmt.Sprintf(" , %s ", order.Feilds[i]))
+		}
+		sqlBuff.WriteString(order.Type)
+
+		sqlBuff.WriteString(fmt.Sprintf(" limit %d offset %d ", paging.Limit, paging.CursorValue))
+	}
+	dbo.logger.Debug("SelectRowsUnionToMaps", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
+
+	rows, err := dbo.conn.Queryx(sqlBuff.String(), values...)
+	if err != nil {
+		return nil, err
+	}
+
+	var result = make([]map[string]interface{}, 0)
+	for rows.Next() {
+		var dest = make(map[string]interface{})
+		if err = rows.MapScan(dest); err != nil {
+			return nil, err
+		}
+		result = append(result, dest)
+	}
+	return result, nil
+}
+
 // SelectRows select rows to struct slice
 func (dbo *DBO) SelectRows(table string, cols []string, where []Where, order *Order, paging *Paging, result interface{}) error {
 	if table == "" {
@@ -278,7 +341,7 @@ func (dbo *DBO) SelectRows(table string, cols []string, where []Where, order *Or
 		}
 	}
 
-	dbo.logger.Debug("SelectRows", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
+	//dbo.logger.Debug("SelectRows", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
 	return dbo.conn.Select(result, sqlBuff.String(), values...)
 }
@@ -331,7 +394,7 @@ func (dbo *DBO) SelectRowsToMaps(table string, cols []string, where []Where, ord
 		}
 	}
 
-	dbo.logger.Debug("SelectRows", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
+	//dbo.logger.Debug("SelectRowsToMaps", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
 	rows, err := dbo.conn.Queryx(sqlBuff.String(), values...)
 	if err != nil {

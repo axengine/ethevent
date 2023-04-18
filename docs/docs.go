@@ -250,7 +250,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "event",
-                "pageRo",
                 "taskId"
             ],
             "properties": {
@@ -281,10 +280,13 @@ const docTemplate = `{
                 "txRo": {
                     "$ref": "#/definitions/bean.TxRo"
                 },
-                "where": {
+                "wheres": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bean.Where"
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/bean.Where"
+                        }
                     }
                 }
             }
@@ -299,7 +301,6 @@ const docTemplate = `{
                     }
                 },
                 "orderType": {
-                    "description": "ASC/DESC",
                     "type": "string",
                     "enum": [
                         "ASC",
@@ -461,9 +462,7 @@ const docTemplate = `{
                     "description": "can be =、\u003e、\u003c、\u003c\u003e and any operator supported by sql-database",
                     "type": "string"
                 },
-                "value": {
-                    "type": "string"
-                }
+                "value": {}
             }
         },
         "model.Task": {

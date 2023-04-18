@@ -30,41 +30,40 @@ type TaskUpdateRo struct {
 }
 
 type BlockRo struct {
-	Number uint64 `query:"number" validate:"omitempty"`
-	Hash   string `query:"hash" validate:"omitempty"`
+	Number uint64 `query:"number" json:"number" validate:"omitempty"`
+	Hash   string `query:"hash" json:"hash" validate:"omitempty"`
 }
 
 type TxRo struct {
-	Hash string `query:"hash" validate:"omitempty"`
+	Hash string `query:"hash" json:"hash" validate:"omitempty"`
 }
 
 type TimeRo struct {
-	Begin int64 `query:"begin" validate:"omitempty"`
-	End   int64 `query:"end" validate:"omitempty"`
+	Begin int64 `query:"begin" json:"begin" validate:"omitempty"`
+	End   int64 `query:"end" json:"end" validate:"omitempty"`
 }
 
 type Where struct {
-	Name  string `query:"name" validate:"omitempty"`
-	Value string `query:"value" validate:"omitempty"`
-	Op    string `query:"op" validate:"omitempty"` // can be =、>、<、<> and any operator supported by sql-database
+	Name  string      `query:"name" json:"name" validate:"omitempty"`
+	Value interface{} `query:"value" json:"value" validate:"omitempty"`
+	Op    string      `query:"op" json:"op" validate:"omitempty"` // can be =、>、<、<> and any operator supported by sql-database
 }
 
 type OrderRo struct {
-	// ASC/DESC
-	OrderType string   `query:"orderType" validate:"omitempty,oneof=ASC DESC"`
-	Feilds    []string `query:"feilds" validate:"omitempty"`
+	OrderType string   `query:"orderType" json:"orderType" validate:"omitempty,oneof=ASC DESC"`
+	Feilds    []string `query:"feilds" json:"feilds" validate:"omitempty"`
 }
 
 type EventListRo struct {
-	TaskId  uint     `query:"taskId" json:"taskId" validate:"required,gt=0"`
-	Event   string   `query:"event" json:"event" validate:"required,gt=0"`
-	Cols    []string `query:"cols" json:"cols" validate:"omitempty"`
-	Where   []Where  `query:"where" json:"where" validate:"omitempty"`
-	BlockRo *BlockRo `query:"blockRo" json:"blockRo" validate:"omitempty"`
-	TxRo    *TxRo    `query:"txRo" json:"txRo" validate:"omitempty"`
-	TimeRo  *TimeRo  `query:"timeRo" json:"timeRo" validate:"omitempty"`
-	PageRo  *PageRo  `query:"pageRo" json:"pageRo" validate:"required"`
-	OrderRo *OrderRo `query:"orderRo" json:"orderRo" validate:"omitempty"`
+	TaskId  uint      `query:"taskId" json:"taskId" validate:"required,gt=0"`
+	Event   string    `query:"event" json:"event" validate:"required,gt=0"`
+	Cols    []string  `query:"cols" json:"cols" validate:"omitempty"`
+	Wheres  [][]Where `query:"wheres" json:"wheres" validate:"omitempty"`
+	BlockRo *BlockRo  `query:"blockRo" json:"blockRo" validate:"omitempty"`
+	TxRo    *TxRo     `query:"txRo" json:"txRo" validate:"omitempty"`
+	TimeRo  *TimeRo   `query:"timeRo" json:"timeRo" validate:"omitempty"`
+	OrderRo *OrderRo  `query:"orderRo" json:"orderRo" validate:"omitempty"`
+	PageRo  *PageRo   `query:"pageRo" json:"pageRo" validate:"omitempty"`
 }
 
 type Event map[string]interface{}

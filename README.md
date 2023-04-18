@@ -40,59 +40,128 @@ curl 'http://localhost:8080/v1/event/list' \
 ## /v1/event/list request
 ```
 type BlockRo struct {
-	Number uint64 `query:"number" validate:"omitempty"`
-	Hash   string `query:"hash" validate:"omitempty"`
+	Number uint64 `query:"number" json:"number" validate:"omitempty"`
+	Hash   string `query:"hash" json:"hash" validate:"omitempty"`
 }
 
 type TxRo struct {
-	Hash string `query:"hash" validate:"omitempty"`
+	Hash string `query:"hash" json:"hash" validate:"omitempty"`
 }
 
 type TimeRo struct {
-	Begin int64 `query:"begin" validate:"omitempty"`
-	End   int64 `query:"end" validate:"omitempty"`
+	Begin int64 `query:"begin" json:"begin" validate:"omitempty"`
+	End   int64 `query:"end" json:"end" validate:"omitempty"`
 }
 
 type Where struct {
-	Name  string `query:"name" validate:"omitempty"`
-	Value string `query:"value" validate:"omitempty"`
+	Name  string      `query:"name" json:"name" validate:"omitempty"`
+	Value interface{} `query:"value" json:"value" validate:"omitempty"`
+	Op    string      `query:"op" json:"op" validate:"omitempty"` // can be =、>、<、<> and any operator supported by sql-database
 }
 
 type OrderRo struct {
-	OrderType string   `query:"orderType" validate:"omitempty,oneof=ASC DESC"`
-	Feilds    []string `query:"feilds" validate:"omitempty"`
+	OrderType string   `query:"orderType" json:"orderType" validate:"omitempty,oneof=ASC DESC"`
+	Feilds    []string `query:"feilds" json:"feilds" validate:"omitempty"`
 }
 
 type EventListRo struct {
-	TaskId  uint     `query:"taskId" json:"taskId" validate:"required,gt=0"`
-	Event   string   `query:"event" json:"event" validate:"required,gt=0"`
-	Cols    []string `query:"cols" json:"cols" validate:"omitempty"`
-	Where   []Where  `query:"where" json:"where" validate:"omitempty"`
-	BlockRo *BlockRo `query:"blockRo" json:"blockRo" validate:"omitempty"`
-	TxRo    *TxRo    `query:"txRo" json:"txRo" validate:"omitempty"`
-	TimeRo  *TimeRo  `query:"timeRo" json:"timeRo" validate:"omitempty"`
-	PageRo  *PageRo  `query:"pageRo" json:"pageRo" validate:"required"`
-	OrderRo *OrderRo `query:"orderRo" json:"orderRo" validate:"omitempty"`
+	TaskId  uint      `query:"taskId" json:"taskId" validate:"required,gt=0"`
+	Event   string    `query:"event" json:"event" validate:"required,gt=0"`
+	Cols    []string  `query:"cols" json:"cols" validate:"omitempty"`
+	Wheres  [][]Where `query:"wheres" json:"wheres" validate:"omitempty"`
+	BlockRo *BlockRo  `query:"blockRo" json:"blockRo" validate:"omitempty"`
+	TxRo    *TxRo     `query:"txRo" json:"txRo" validate:"omitempty"`
+	TimeRo  *TimeRo   `query:"timeRo" json:"timeRo" validate:"omitempty"`
+	OrderRo *OrderRo  `query:"orderRo" json:"orderRo" validate:"omitempty"`
+	PageRo  *PageRo   `query:"pageRo" json:"pageRo" validate:"required"`
 }
 ```
-- taskId 和 event是要求必传的，pageRo只在查询`记录`时用于分页，是必传项。
-- cols可以指定要查询的字段，所有事件初了事件本身的字段外，还包含以下公共字段:
-```
-type EventBase struct {
-	ID          int64  `json:"id"`
-	Address     string `json:"address"`
-	BlockNumber uint64 `json:"blockNumber"`
-	BlockHash   string `json:"blockHash"`
-	BlockTime   int64  `json:"blockTime"`
-	TxHash      string `json:"txHash"`
-	TxIndex     uint   `json:"txIndex"`
-	Method      uint32 `json:"method"` // transaction method
+- taskId 和 event是要求必传的，通过taskId和event确定查询的表
+- cols可以指定要查询的字段，所有事件除了事件本身的字段外，还包含以下公共字段:
+- cols公共字段：`ID` `Address` `BlockHash` `BlockNumber` `BlockTime` `TxHash` `TxIndex` `Method`
+- cols支持SQL可查询字段，例如：`sum(value)`,`avg(value)`,`count(*)`等sql可查询的字段
+- blockRo 区块高度和hash 作为公共条件
+- timeRo 区块时间 作为公共条件
+- txRo 交易hash 作为公共条件
+- orderRo 排序，指定排序字段和方式
+- pageRo 当出现orderRo时pageRo必传，游标分页；单次查询最大100条数据,防止查询大量数据带来的负荷
+- wheres 指定自定义查询条件，如果len(wheres)>1，将执行union查询,此时 blockRo/timeRo/txRo 将作为公共条件；
+- cols和wheres中指定字段名称时，如果是sql关键字，需要用[]括起来，例如:`[FROM]` `[TO]`
+
+### request example
+- 查询记录
+```json
+{
+  "taskId": 1,
+  "event": "Transfer",
+  "cols": [
+    "ID",
+    "Address",
+    "BlockNumber",
+    "BlockHash",
+    "BlockTime",
+    "TxHash",
+    "TxIndex",
+    "Method",
+    "[FROM]",
+    "[TO]",
+    "VALUE"
+  ],
+  "wheres": [
+    [
+      {
+        "name": "[FROM]",
+        "value": "0x1100e4B8674aea98a2AC239432f41f3BFB50c671",
+        "op": "="
+      }
+    ],
+    [
+      {
+        "name": "[TO]",
+        "value": "0x3d2e7a5ffFa8eBc7C82C4327B605c4a7DDb714Db",
+        "op": "="
+      }
+    ]
+  ],
+  "blockRo": {
+    "number": 0,
+    "hash": ""
+  },
+  "txRo": {
+    "hash": ""
+  },
+  "timeRo": {
+    "begin": 1681736896,
+    "end": 1681736899
+  },
+  "pageRo": {
+    "cursor": 0,
+    "limit": 100
+  },
+  "orderRo": {
+    "orderType": "DESC",
+    "feilds": [
+      "ID",
+      "BlockNumber"
+    ]
+  }
 }
 ```
-cols字段支持统计字段，例如：`sum(value)`,`avg(value)`,`count(*)`等sql可查询的字段
-- where 指定自定义查询条件，例如:Name="from" Value="0xe5DaF2824B43d8b0C961225Ab9992baf39F5F835" Op="="
-- blockRo 区块高度和hash
-- timeRo 区块时间
-- txRo 交易hash
-- pageRo 游标分页
-- orderRo 排序，默认`ID DESC`
+```
+ {"sql": "select ID,Address,BlockNumber,BlockHash,BlockTime,TxHash,TxIndex,Method,[FROM],[TO],VALUE from EVENT_1_Transfer where 1 = 1 and [FROM] = ?  and BlockTime >= ?  and BlockTime < ?  
+ union select ID,Address,BlockNumber,BlockHash,BlockTime,TxHash,TxIndex,Method,[FROM],[TO],VALUE from EVENT_1_Transfer where 1 = 1 and [TO] = ?  and BlockTime >= ?  and BlockTime < ?  
+ order by ID  , BlockNumber DESC limit 100 offset 0 ", 
+ "values": ["0x1100e4B8674aea98a2AC239432f41f3BFB50c671",1681736896,1681736899,"0x3d2e7a5ffFa8eBc7C82C4327B605c4a7DDb714Db",1681736896,1681736899]}
+```
+
+- 统计
+```json
+{
+  "taskId": 1,
+  "event": "Transfer",
+  "cols":["AVG(VALUE)"]
+}
+```
+```
+{"sql": "select COUNT(*) from EVENT_1_Transfer where 1 = 1 and 1 = ? ", "values": [1]}
+```

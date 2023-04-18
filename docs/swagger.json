@@ -242,7 +242,6 @@
             "type": "object",
             "required": [
                 "event",
-                "pageRo",
                 "taskId"
             ],
             "properties": {
@@ -273,10 +272,13 @@
                 "txRo": {
                     "$ref": "#/definitions/bean.TxRo"
                 },
-                "where": {
+                "wheres": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bean.Where"
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/bean.Where"
+                        }
                     }
                 }
             }
@@ -291,7 +293,6 @@
                     }
                 },
                 "orderType": {
-                    "description": "ASC/DESC",
                     "type": "string",
                     "enum": [
                         "ASC",
@@ -453,9 +454,7 @@
                     "description": "can be =、\u003e、\u003c、\u003c\u003e and any operator supported by sql-database",
                     "type": "string"
                 },
-                "value": {
-                    "type": "string"
-                }
+                "value": {}
             }
         },
         "model.Task": {

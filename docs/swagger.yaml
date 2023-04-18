@@ -30,13 +30,14 @@ definitions:
         $ref: '#/definitions/bean.TimeRo'
       txRo:
         $ref: '#/definitions/bean.TxRo'
-      where:
+      wheres:
         items:
-          $ref: '#/definitions/bean.Where'
+          items:
+            $ref: '#/definitions/bean.Where'
+          type: array
         type: array
     required:
     - event
-    - pageRo
     - taskId
     type: object
   bean.OrderRo:
@@ -46,7 +47,6 @@ definitions:
           type: string
         type: array
       orderType:
-        description: ASC/DESC
         enum:
         - ASC
         - DESC
@@ -157,8 +157,7 @@ definitions:
       op:
         description: can be =、>、<、<> and any operator supported by sql-database
         type: string
-      value:
-        type: string
+      value: {}
     type: object
   model.Task:
     properties:

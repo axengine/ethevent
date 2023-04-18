@@ -112,40 +112,70 @@ func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, 
 	var (
 		err       error
 		tableName = fmt.Sprintf("EVENT_%d_%s", req.TaskId, req.Event)
+		wheres    = make([][]database.Where, 0)
 	)
 
-	where := []database.Where{
-		database.Where{Name: "1", Value: 1},
-	}
-	for _, v := range req.Where {
-		if v.Name != "" && v.Value != "" {
-			where = append(where, database.Where{Name: v.Name, Value: v.Value, Op: v.Op})
+	if len(req.Wheres) == 0 {
+		where := []database.Where{
+			database.Where{Name: "1", Value: 1},
+		}
+		if req.BlockRo != nil {
+			if req.BlockRo.Number > 0 {
+				where = append(where, database.Where{Name: "BlockNumber", Value: req.BlockRo.Number})
+			}
+			if req.BlockRo.Hash != "" {
+				where = append(where, database.Where{Name: "BlockHash", Value: req.BlockRo.Hash})
+			}
+		}
+		if req.TxRo != nil {
+			if req.TxRo.Hash != "" {
+				where = append(where, database.Where{Name: "TxHash", Value: req.TxRo.Hash})
+			}
+		}
+		if req.TimeRo != nil {
+			if req.TimeRo.Begin > 0 {
+				where = append(where, database.Where{Name: "BlockTime", Value: req.TimeRo.Begin, Op: ">="})
+			}
+			if req.TimeRo.End > 0 {
+				where = append(where, database.Where{Name: "BlockTime", Value: req.TimeRo.End, Op: "<"})
+			}
+		}
+		wheres = append(wheres, where)
+	} else {
+		for _, reqWhere := range req.Wheres {
+			where := []database.Where{}
+			for _, v := range reqWhere {
+				if v.Name != "" && v.Value != "" {
+					where = append(where, database.Where{Name: v.Name, Value: v.Value, Op: v.Op})
+				}
+			}
+
+			if req.BlockRo != nil {
+				if req.BlockRo.Number > 0 {
+					where = append(where, database.Where{Name: "BlockNumber", Value: req.BlockRo.Number})
+				}
+				if req.BlockRo.Hash != "" {
+					where = append(where, database.Where{Name: "BlockHash", Value: req.BlockRo.Hash})
+				}
+			}
+			if req.TxRo != nil {
+				if req.TxRo.Hash != "" {
+					where = append(where, database.Where{Name: "TxHash", Value: req.TxRo.Hash})
+				}
+			}
+			if req.TimeRo != nil {
+				if req.TimeRo.Begin > 0 {
+					where = append(where, database.Where{Name: "BlockTime", Value: req.TimeRo.Begin, Op: ">="})
+				}
+				if req.TimeRo.End > 0 {
+					where = append(where, database.Where{Name: "BlockTime", Value: req.TimeRo.End, Op: "<"})
+				}
+			}
+			wheres = append(wheres, where)
 		}
 	}
 
-	if req.BlockRo != nil {
-		if req.BlockRo.Number > 0 {
-			where = append(where, database.Where{Name: "BlockNumber", Value: req.BlockRo.Number})
-		}
-		if req.BlockRo.Hash != "" {
-			where = append(where, database.Where{Name: "BlockHash", Value: req.BlockRo.Hash})
-		}
-	}
-	if req.TxRo != nil {
-		if req.TxRo.Hash != "" {
-			where = append(where, database.Where{Name: "TxHash", Value: req.TxRo.Hash})
-		}
-	}
-	if req.TimeRo != nil {
-		if req.TimeRo.Begin > 0 {
-			where = append(where, database.Where{Name: "BlockTime", Value: req.TimeRo.Begin, Op: ">="})
-		}
-		if req.TimeRo.End > 0 {
-			where = append(where, database.Where{Name: "BlockTime", Value: req.TimeRo.End, Op: "<"})
-		}
-	}
-
-	orderT, _ := database.MakeOrder("DESC", "ID")
+	var orderT *database.Order
 	if req.OrderRo != nil && req.OrderRo.OrderType != "" {
 		orderT, err = database.MakeOrder(req.OrderRo.OrderType, req.OrderRo.Feilds...)
 		if err != nil {
@@ -158,7 +188,7 @@ func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, 
 		paging = database.MakePaging("ID", req.PageRo.Cursor, req.PageRo.Limit)
 	}
 
-	return svc.db.SelectRowsToMaps(tableName, req.Cols, where, orderT, paging)
+	return svc.db.SelectRowsUnionToMaps(tableName, req.Cols, wheres, orderT, paging)
 }
 
 func (svc *Service) findTaskByContract(contract string) (*model.Task, error) {
