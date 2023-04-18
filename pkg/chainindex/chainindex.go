@@ -185,7 +185,7 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 						return err
 					}
 					if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
-						number, time.Now().Unix(), t.ID); err != nil {
+						t.Current+1, time.Now().Unix(), t.ID); err != nil {
 						return err
 					}
 					return nil
@@ -193,7 +193,7 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 					ci.logger.Error("handleNumber", zap.Error(err))
 					continue
 				}
-				t.Current = number
+				t.Current = t.Current + 1
 				ci.logger.Info("handleNumber", zap.Uint("task", t.ID), zap.Uint64("height", t.Current))
 			}
 		}
@@ -226,10 +226,13 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, tx *
 			return err
 		} else {
 			if !receipt.Bloom.Test(common.HexToAddress(t.Contract).Bytes()) {
-				return nil
+				continue
 			}
 			ins, _ := abi.JSON(strings.NewReader(t.Abi))
 			for _, rcptLog := range receipt.Logs {
+				if len(rcptLog.Topics) == 0 {
+					continue
+				}
 				event, err := ins.EventByID(rcptLog.Topics[0])
 				if err != nil {
 					continue
