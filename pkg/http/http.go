@@ -6,6 +6,7 @@ import (
 	_ "github.com/axengine/ethevent/docs"
 	"github.com/axengine/ethevent/pkg/http/validator"
 	"github.com/axengine/ethevent/pkg/svc"
+	echopprof "github.com/hiko1129/echo-pprof"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
@@ -28,9 +29,12 @@ func (hs *HttpServer) Start(ctx context.Context, wg *sync.WaitGroup, dev bool, p
 	e.Validator = &validator.CustomValidator{}
 
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.DefaultCORSConfig))
-	// set DOCS
+
 	if dev {
+		// set DOCS
 		e.GET("/docs/*any", echoSwagger.WrapHandler)
+		// pprof
+		echopprof.Wrap(e)
 	}
 
 	v1 := e.Group("/v1")

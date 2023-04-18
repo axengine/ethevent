@@ -8,6 +8,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.6
 	github.com/go-playground/validator/v10 v10.12.0
 	github.com/google/uuid v1.1.5
+	github.com/hiko1129/echo-pprof v1.0.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/mattn/go-sqlite3 v1.14.15
