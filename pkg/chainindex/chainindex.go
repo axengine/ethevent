@@ -156,12 +156,12 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 				t = &tasks[0]
 			}
 			if t.DeletedAt > 0 {
-				ci.logger.Info("Task Deleted", zap.Uint("id", t.ID))
+				ci.logger.Debug("Task Deleted", zap.Uint("id", t.ID))
 				return
 			}
 			if t.Paused == 1 {
-				ci.logger.Info("Task Paused", zap.Uint("id", t.ID))
-				time.Sleep(time.Second * 5)
+				ci.logger.Debug("Task Paused", zap.Uint("id", t.ID))
+				time.Sleep(time.Second * 30)
 				continue
 			}
 
@@ -179,19 +179,25 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 				continue
 			}
 			if t.Current < number {
-				if err := ci.db.Transaction(func(tx *sql.Tx) error {
-					if err := ci.handleNumber(ctx, cli, tx, t.Current+1, t); err != nil {
-						ci.logger.Error("handleNumber", zap.Error(err), zap.Uint64("chain", t.ChainId))
-						return err
-					}
-					if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
-						t.Current+1, time.Now().Unix(), t.ID); err != nil {
-						return err
-					}
-					return nil
-				}); err != nil {
-					ci.logger.Error("handleNumber", zap.Error(err))
+				if events, err := ci.parseBlock(ctx, cli, t.Current+1, t); err != nil {
+					ci.logger.Error("parseBlock", zap.Error(err), zap.Uint64("chain", t.ChainId))
 					continue
+				} else {
+					if err := ci.db.Transaction(func(tx *sql.Tx) error {
+						for _, v := range events {
+							if _, err := ci.db.Insert(tx, v.Table, v.Cols); err != nil {
+								return err
+							}
+						}
+						if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
+							t.Current+1, time.Now().Unix(), t.ID); err != nil {
+							return err
+						}
+						return nil
+					}); err != nil {
+						ci.logger.Error("parseBlock", zap.Error(err))
+						continue
+					}
 				}
 				t.Current = t.Current + 1
 				ci.logger.Info("handleNumber", zap.Uint("task", t.ID), zap.Uint64("height", t.Current))
@@ -205,17 +211,16 @@ type Event struct {
 	Cols  []database.Feild
 }
 
-func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, tx *sql.Tx, number uint64, t *model.Task) error {
+func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, number uint64, t *model.Task) ([]Event, error) {
+	var events []Event
 	block, err := cli.BlockByNumber(ctx, big.NewInt(int64(number)))
 	if err != nil {
-		return err
+		return events, err
 	}
 	// filter address AND topics
 	if !block.Bloom().Test(common.HexToAddress(t.Contract).Bytes()) {
-		return nil
+		return events, nil
 	}
-
-	var events []Event
 
 	for _, tx := range block.Transactions() {
 		//if tx.To() == nil || tx.To().Hex() != common.HexToAddress(t.Contract).String() {
@@ -223,7 +228,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, tx *
 		//}
 
 		if receipt, err := cli.TransactionReceipt(ctx, tx.Hash()); err != nil {
-			return err
+			return events, err
 		} else {
 			if !receipt.Bloom.Test(common.HexToAddress(t.Contract).Bytes()) {
 				continue
@@ -288,7 +293,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, tx *
 				indexed := rcptLog.Topics[1:]
 				if len(indexed) > 0 {
 					if err := abi.ParseTopicsIntoMap(indexedParams, indexedArgs, indexed); err != nil {
-						return err
+						return events, err
 					}
 					for k, v := range indexedParams {
 						if vv, ok := v.(fmt.Stringer); ok {
@@ -305,7 +310,7 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, tx *
 				if len(rcptLog.Data) > 0 {
 					unindexed, err := event.Inputs.Unpack(rcptLog.Data)
 					if err != nil {
-						return errors.Wrap(err, "event.Inputs.Unpack tx:"+tx.Hash().Hex())
+						return events, errors.Wrap(err, "event.Inputs.Unpack tx:"+tx.Hash().Hex())
 					}
 
 					for i, v := range event.Inputs.NonIndexed() {
@@ -326,11 +331,5 @@ func (ci *ChainIndex) handleNumber(ctx context.Context, cli *ethcli.ETHCli, tx *
 			}
 		}
 	}
-
-	for _, v := range events {
-		if _, err := ci.db.Insert(tx, v.Table, v.Cols); err != nil {
-			return err
-		}
-	}
-	return nil
+	return events, nil
 }
