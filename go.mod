@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/axengine/ethcli v0.0.0-20220111065144-59845285a03b
-	github.com/axengine/utils/log v0.0.0-20230307072430-7a3388acf5e4
+	github.com/axengine/utils/log v0.0.0-20230419075931-2efa9464e090
 	github.com/ethereum/go-ethereum v1.10.6
 	github.com/go-playground/validator/v10 v10.12.0
 	github.com/google/uuid v1.1.5
