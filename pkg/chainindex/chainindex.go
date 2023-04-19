@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/axengine/ethcli"
+	"github.com/axengine/ethcli/eth/types"
 	"github.com/axengine/ethevent/pkg/database"
 	"github.com/axengine/ethevent/pkg/model"
 	"github.com/axengine/utils/log"
@@ -164,43 +165,44 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 				time.Sleep(time.Second * 30)
 				continue
 			}
-
-			number, err := cli.BlockNumber(ctx)
-			if err != nil {
-				ci.logger.Warn("BlockNumber", zap.Error(err))
-				continue
-			}
 			if t.Current < t.Start {
-				t.Current = t.Start
+				t.Current = t.Start - 1
 			}
-			if t.Current >= number {
+
+			var parseBlock = t.Current + 1
+
+			block, err := cli.BlockByNumber(ctx, new(big.Int).SetUint64(parseBlock))
+			if err != nil && strings.Contains(err.Error(), "not found") {
 				next := time.Unix(t.UpdatedAt+t.Interval, 0)
 				time.Sleep(next.Sub(time.Now()))
 				continue
 			}
-			if t.Current < number {
-				if events, err := ci.parseBlock(ctx, cli, t.Current+1, t); err != nil {
-					ci.logger.Error("parseBlock", zap.Error(err), zap.Uint64("chain", t.ChainId))
-					continue
-				} else {
-					if err := ci.db.Transaction(func(tx *sql.Tx) error {
-						for _, v := range events {
-							if _, err := ci.db.Insert(tx, v.Table, v.Cols); err != nil {
-								return err
-							}
-						}
-						if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
-							t.Current+1, time.Now().Unix(), t.ID); err != nil {
+
+			begin := time.Now()
+			if events, err := ci.parseBlock(ctx, cli, block, t); err != nil {
+				ci.logger.Error("parseBlock", zap.Error(err), zap.Uint("task", t.ID))
+				continue
+			} else {
+				if err := ci.db.Transaction(func(tx *sql.Tx) error {
+					for _, v := range events {
+						if _, err := ci.db.Insert(tx, v.Table, v.Cols); err != nil {
 							return err
 						}
-						return nil
-					}); err != nil {
-						ci.logger.Error("parseBlock", zap.Error(err))
-						continue
 					}
+					if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
+						parseBlock, time.Now().Unix(), t.ID); err != nil {
+						return err
+					}
+					return nil
+				}); err != nil {
+					ci.logger.Error("parseBlock", zap.Error(err))
+					continue
 				}
-				t.Current = t.Current + 1
-				ci.logger.Info("handleNumber", zap.Uint("task", t.ID), zap.Uint64("height", t.Current))
+				t.Current = parseBlock
+				ci.logger.Info("parseBlock", zap.Uint("task", t.ID), zap.Uint64("height", parseBlock),
+					zap.Int("txs", len(block.Transactions())),
+					zap.Int("events", len(events)),
+					zap.Duration("use", time.Now().Sub(begin)))
 			}
 		}
 	}
@@ -211,22 +213,15 @@ type Event struct {
 	Cols  []database.Feild
 }
 
-func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, number uint64, t *model.Task) ([]Event, error) {
+func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, block *types.Block, t *model.Task) ([]Event, error) {
 	var events []Event
-	block, err := cli.BlockByNumber(ctx, big.NewInt(int64(number)))
-	if err != nil {
-		return events, err
-	}
+
 	// filter address AND topics
 	if !block.Bloom().Test(common.HexToAddress(t.Contract).Bytes()) {
 		return events, nil
 	}
 
 	for _, tx := range block.Transactions() {
-		//if tx.To() == nil || tx.To().Hex() != common.HexToAddress(t.Contract).String() {
-		//	continue
-		//}
-
 		if receipt, err := cli.TransactionReceipt(ctx, tx.Hash()); err != nil {
 			return events, err
 		} else {
