@@ -173,16 +173,16 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 			var parseBlock = t.Current + 1
 
 			block, err := cli.BlockByNumber(ctx, new(big.Int).SetUint64(parseBlock))
-			if err != nil && strings.Contains(err.Error(), "not found") {
-				next := time.Unix(t.UpdatedAt+t.Interval, 0)
-				time.Sleep(next.Sub(time.Now()))
-				continue
-			}
-
-			if block == nil || block.Header() == nil {
-				ci.logger.Error("block is nil", zap.Uint64("height", parseBlock),
-					zap.Any("block", block),
-				)
+			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					next := time.Unix(t.UpdatedAt+t.Interval, 0)
+					time.Sleep(next.Sub(time.Now()))
+				} else if strings.Contains(err.Error(), "429 Too Many Requests") {
+					log.Logger.Warn("BlockByNumber", zap.Error(err))
+					time.Sleep(time.Minute)
+				} else {
+					ci.logger.Error("BlockByNumber", zap.Error(err))
+				}
 				continue
 			}
 
