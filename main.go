@@ -23,7 +23,7 @@ import (
 // @host
 // @BasePath /
 func main() {
-	dbo := database.New(filepath.Join(viper.GetString("datadir"), "ethevents.db"), log.Logger)
+	dbo := database.New(filepath.Join(viper.GetString("datadir"), "events.db"), log.Logger)
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
