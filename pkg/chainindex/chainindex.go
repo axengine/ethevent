@@ -137,6 +137,7 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli.ETHCli, t *model.Task) {
+	evABI, _ := abi.JSON(strings.NewReader(t.Abi))
 	defer wg.Done()
 	for {
 		select {
@@ -179,7 +180,7 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 			}
 
 			begin := time.Now()
-			if events, err := ci.parseBlock(ctx, cli, block, t); err != nil {
+			if events, err := ci.parseBlock(ctx, cli, block, evABI, t); err != nil {
 				ci.logger.Error("parseBlock", zap.Error(err), zap.Uint("task", t.ID))
 				continue
 			} else {
@@ -213,11 +214,23 @@ type Event struct {
 	Cols  []database.Feild
 }
 
-func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, block *types.Block, t *model.Task) ([]Event, error) {
+func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, block *types.Block, evABI abi.ABI, t *model.Task) ([]Event, error) {
 	var events []Event
 
-	// filter address AND topics
-	if !block.Bloom().Test(common.HexToAddress(t.Contract).Bytes()) {
+	match := func() bool {
+		var matched bool
+		for _, v := range evABI.Events {
+			// 包含（事件&&合约地址） 这里不能说明一定有合约地址的该事件
+			if block.Bloom().Test(v.ID.Bytes()) && block.Bloom().Test(common.HexToAddress(t.Contract).Bytes()) {
+				matched = true
+				break
+			}
+		}
+		return matched
+	}
+
+	if !match() {
+		log.Logger.Debug("parseBlock skip", zap.Int64("height", block.Number().Int64()))
 		return events, nil
 	}
 
@@ -228,21 +241,20 @@ func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, block 
 			if !receipt.Bloom.Test(common.HexToAddress(t.Contract).Bytes()) {
 				continue
 			}
-			ins, _ := abi.JSON(strings.NewReader(t.Abi))
-			for _, rcptLog := range receipt.Logs {
-				if len(rcptLog.Topics) == 0 {
-					continue
-				}
-				event, err := ins.EventByID(rcptLog.Topics[0])
-				if err != nil {
-					continue
-				}
 
+			for _, rcptLog := range receipt.Logs {
 				eventAddress := rcptLog.Address.Hex()
 				if eventAddress != common.HexToAddress(t.Contract).Hex() {
 					continue
 				}
 
+				if len(rcptLog.Topics) == 0 {
+					continue
+				}
+				event, err := evABI.EventByID(rcptLog.Topics[0])
+				if err != nil {
+					continue
+				}
 				var cols []database.Feild
 				{
 					cols = append(cols, database.Feild{

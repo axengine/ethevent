@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/axengine/ethcli"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -30,6 +32,13 @@ func TestBloom(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	evABI, _ := abi.JSON(strings.NewReader(`[{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`))
+
+	for k, v := range evABI.Events {
+		fmt.Println("k=", k, " v=", v.ID.Hex(), " matched=", block.Bloom().Test(v.ID.Bytes()))
+	}
+
 	{
 		b := block.Bloom().Test(common.HexToAddress("0xc748673057861a797275cd8a068abb95a902e8de").Bytes())
 		fmt.Println(b)
@@ -46,12 +55,12 @@ func TestBloom(t *testing.T) {
 		b := block.Bloom().Test(common.HexToHash("0xc736ca3d9b1e90af4230bd8f9626528b3d4e0ee0").Bytes())
 		fmt.Println(b)
 	}
-	//for _, v := range block.Transactions() {
-	//	receipt, err := cli.TransactionReceipt(context.Background(), v.Hash())
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//	testInReceipt := receipt.Bloom.Test(common.HexToAddress("0xD085CE10bC2055fe8caA0e1137ebb10854E51CB7").Bytes())
-	//	fmt.Println(testInReceipt, " ", v.Hash().Hex())
-	//}
+	for _, v := range block.Transactions() {
+		receipt, err := cli.TransactionReceipt(context.Background(), v.Hash())
+		if err != nil {
+			t.Fatal(err)
+		}
+		testInReceipt := receipt.Bloom.Test(common.HexToAddress("0xc748673057861a797275cd8a068abb95a902e8de").Bytes())
+		fmt.Println(testInReceipt, " ", v.Hash().Hex())
+	}
 }
