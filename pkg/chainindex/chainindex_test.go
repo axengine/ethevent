@@ -27,8 +27,8 @@ func TestType(t *testing.T) {
 }
 
 func TestBloom(t *testing.T) {
-	cli, _ := ethcli.New("https://bsc-dataseed1.ninicoin.io/")
-	block, err := cli.BlockByNumber(context.Background(), big.NewInt(27471643))
+	cli, _ := ethcli.New("https://goerli.infura.io/v3/03d2548af36149abb66a54983ea238f9")
+	block, err := cli.BlockByNumber(context.Background(), big.NewInt(8577205))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,27 +40,16 @@ func TestBloom(t *testing.T) {
 	}
 
 	{
-		b := block.Bloom().Test(common.HexToAddress("0xc748673057861a797275cd8a068abb95a902e8de").Bytes())
+		b := block.Bloom().Test(common.HexToAddress("0xC01138c43c8D99732fa900059FCAA9f34Cd6047a").Bytes())
 		fmt.Println(b)
 	}
-	{
-		b := block.Bloom().Test(common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef").Bytes())
-		fmt.Println(b)
-	}
-	{
-		b := block.Bloom().Test(common.HexToHash("0x643337e906111d248a5907ab20e25dac96b6ea69").Bytes())
-		fmt.Println(b)
-	}
-	{
-		b := block.Bloom().Test(common.HexToHash("0xc736ca3d9b1e90af4230bd8f9626528b3d4e0ee0").Bytes())
-		fmt.Println(b)
-	}
+
 	for _, v := range block.Transactions() {
 		receipt, err := cli.TransactionReceipt(context.Background(), v.Hash())
 		if err != nil {
 			t.Fatal(err)
 		}
-		testInReceipt := receipt.Bloom.Test(common.HexToAddress("0xc748673057861a797275cd8a068abb95a902e8de").Bytes())
+		testInReceipt := receipt.Bloom.Test(common.HexToAddress("0xC01138c43c8D99732fa900059FCAA9f34Cd6047a").Bytes())
 		fmt.Println(testInReceipt, " ", v.Hash().Hex())
 	}
 }

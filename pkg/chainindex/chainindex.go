@@ -179,6 +179,13 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 				continue
 			}
 
+			if block == nil || block.Header() == nil {
+				ci.logger.Error("block is nil", zap.Uint64("height", parseBlock),
+					zap.Any("block", block),
+				)
+				continue
+			}
+
 			begin := time.Now()
 			if events, err := ci.parseBlock(ctx, cli, block, evABI, t); err != nil {
 				ci.logger.Error("parseBlock", zap.Error(err), zap.Uint("task", t.ID))
