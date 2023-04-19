@@ -255,7 +255,13 @@ func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, block 
 				if err != nil {
 					continue
 				}
-				var cols []database.Feild
+				var (
+					cols   []database.Feild
+					method uint32
+				)
+				if len(tx.Data()) >= 4 {
+					method = binary.BigEndian.Uint32(tx.Data()[:4])
+				}
 				{
 					cols = append(cols, database.Feild{
 						Name:  "Address",
@@ -283,7 +289,7 @@ func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, block 
 					})
 					cols = append(cols, database.Feild{
 						Name:  "Method",
-						Value: binary.BigEndian.Uint32(tx.Data()[:4]),
+						Value: method,
 					})
 				}
 
