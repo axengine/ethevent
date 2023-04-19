@@ -20,7 +20,7 @@ type Event struct {
 }
 
 func main() {
-	f, err := os.Open("export-token-0xeA7aA1eDd21735A5ab05EE3E90869016191e274E.csv")
+	f, err := os.Open("goerli.csv")
 	if err != nil {
 		panic(err)
 	}
@@ -29,11 +29,11 @@ func main() {
 	r := csv.NewReader(f)
 	r.Comma = ',' // 设置分隔符为逗号
 
-	cli, _ := ethcli.New("https://mainnet.infura.io/v3/74dda2fdd3404d4ea27fe6077804737d")
+	cli, _ := ethcli.New("https://goerli.infura.io/v3/03d2548af36149abb66a54983ea238f9")
 	defer cli.Close()
 	ins, _ := abi.JSON(strings.NewReader(`[{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`))
 
-	dbo := database.New("ethevents.db", log.Logger)
+	dbo := database.New("events.db", log.Logger)
 
 	handled := make(map[string]bool)
 	for {
@@ -42,7 +42,7 @@ func main() {
 			break
 		}
 		fmt.Println(records[0])
-		if records[0] == "TxHash" {
+		if strings.ToUpper(records[0]) == "TXHASH" {
 			continue
 		}
 		if handled[records[0]] {
@@ -67,7 +67,7 @@ func main() {
 			}
 
 			eventAddress := rcptLog.Address.Hex()
-			if eventAddress != common.HexToAddress("0xeA7aA1eDd21735A5ab05EE3E90869016191e274E").Hex() {
+			if eventAddress != common.HexToAddress("0xC01138c43c8D99732fa900059FCAA9f34Cd6047a").Hex() {
 				continue
 			}
 
@@ -148,7 +148,7 @@ func main() {
 			}
 
 			events = append(events, Event{
-				Table: "EVENT_1_TRANSFER",
+				Table: "EVENT_2_TRANSFER",
 				Cols:  cols,
 			})
 		}
