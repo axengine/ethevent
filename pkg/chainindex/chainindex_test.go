@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/axengine/ethcli"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -52,4 +53,21 @@ func TestBloom(t *testing.T) {
 		testInReceipt := receipt.Bloom.Test(common.HexToAddress("0xC01138c43c8D99732fa900059FCAA9f34Cd6047a").Bytes())
 		fmt.Println(testInReceipt, " ", v.Hash().Hex())
 	}
+}
+
+func TestGetLog(t *testing.T) {
+	cli, _ := ethcli.New("https://eth-goerli.blastapi.io/3c4fd7b9-7294-466b-b76a-6c1b8e3bd476")
+	result, err := cli.FilterLogs(context.Background(), ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: big.NewInt(8765478),
+		ToBlock:   big.NewInt(8765479),
+		Addresses: []common.Address{common.HexToAddress("0xC01138c43c8D99732fa900059FCAA9f34Cd6047a")},
+		Topics: [][]common.Hash{
+			{common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("%+v\n", result)
 }
