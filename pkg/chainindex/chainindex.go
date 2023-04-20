@@ -269,6 +269,10 @@ func (ci *ChainIndex) startParseLog(ctx context.Context, wg *sync.WaitGroup, cli
 				t.Current = t.Start - 1
 			}
 
+			// 等出块时间到
+			next := time.Unix(t.UpdatedAt+t.Interval, 0)
+			time.Sleep(next.Sub(time.Now()))
+
 			var beginNumber = t.Current + 1
 			latest, err := cli.BlockNumber(ctx)
 			if err != nil {
@@ -278,8 +282,12 @@ func (ci *ChainIndex) startParseLog(ctx context.Context, wg *sync.WaitGroup, cli
 			var endNumber = latest
 			if endNumber < beginNumber {
 				next := time.Unix(t.UpdatedAt+t.Interval, 0)
-				ci.logger.Debug("waiting", zap.Uint64("beginNumber", beginNumber), zap.Uint64("endNumber", endNumber))
-				time.Sleep(next.Sub(time.Now()))
+				wiggle := next.Sub(time.Now())
+				if wiggle < time.Second {
+					wiggle = time.Second
+				}
+				ci.logger.Debug("waiting", zap.Uint64("beginNumber", beginNumber), zap.Uint64("latest", latest), zap.Duration("wiggle", wiggle))
+				time.Sleep(wiggle)
 				continue
 			}
 

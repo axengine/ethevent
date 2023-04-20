@@ -56,7 +56,7 @@ func TestBloom(t *testing.T) {
 }
 
 func TestGetLog(t *testing.T) {
-	cli, _ := ethcli.New("https://goerli.infura.io/v3/03d2548af36149abb66a54983ea238f9")
+	cli, _ := ethcli.New("https://eth-goerli.blastapi.io/3c4fd7b9-7294-466b-b76a-6c1b8e3bd476")
 	result, err := cli.FilterLogs(context.Background(), ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: big.NewInt(8765478),
