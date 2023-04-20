@@ -283,8 +283,8 @@ func (ci *ChainIndex) startParseLog(ctx context.Context, wg *sync.WaitGroup, cli
 			if endNumber < beginNumber {
 				next := time.Unix(t.UpdatedAt+t.Interval, 0)
 				wiggle := next.Sub(time.Now())
-				if wiggle < time.Second {
-					wiggle = time.Second
+				if wiggle < time.Second*3 {
+					wiggle = time.Second * 3
 				}
 				ci.logger.Debug("waiting", zap.Uint64("beginNumber", beginNumber), zap.Uint64("latest", latest), zap.Duration("wiggle", wiggle))
 				time.Sleep(wiggle)
