@@ -10,6 +10,7 @@ import (
 	"github.com/axengine/ethevent/pkg/database"
 	"github.com/axengine/ethevent/pkg/model"
 	"github.com/axengine/utils/log"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -26,6 +27,11 @@ type ChainIndex struct {
 
 	mu    sync.RWMutex
 	tasks map[uint]*model.Task
+}
+
+type Event struct {
+	Table string
+	Cols  []database.Feild
 }
 
 func New(logger *zap.Logger, db *database.DBO) *ChainIndex {
@@ -127,8 +133,15 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 						log.Logger.Error("initTask", zap.Error(err), zap.Uint("task", task.ID))
 						continue
 					}
-					wg.Add(1)
-					go ci.start(ctx, wg, cli, &task)
+					// 如果支持filter log则使用filter API，否则轮询区块
+					if err := ci.testFilterLog(ctx, cli, &task); err != nil {
+						ci.logger.Info("testFilterLog with err,loop blocks", zap.Error(err), zap.String("RPC", task.Rpc))
+						wg.Add(1)
+						go ci.startParseBlock(ctx, wg, cli, &task)
+					} else {
+						wg.Add(1)
+						go ci.startParseLog(ctx, wg, cli, &task)
+					}
 				}
 			}
 			tm.Reset(time.Second * 5)
@@ -136,7 +149,7 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli.ETHCli, t *model.Task) {
+func (ci *ChainIndex) startParseBlock(ctx context.Context, wg *sync.WaitGroup, cli *ethcli.ETHCli, t *model.Task) {
 	evABI, _ := abi.JSON(strings.NewReader(t.Abi))
 	defer wg.Done()
 	for {
@@ -210,15 +223,244 @@ func (ci *ChainIndex) start(ctx context.Context, wg *sync.WaitGroup, cli *ethcli
 				ci.logger.Info("parseBlock", zap.Uint("task", t.ID), zap.Uint64("height", parseBlock),
 					zap.Int("txs", len(block.Transactions())),
 					zap.Int("events", len(events)),
-					zap.Duration("use", time.Now().Sub(begin)))
+					zap.Duration("use", time.Since(begin)))
 			}
 		}
 	}
 }
 
-type Event struct {
-	Table string
-	Cols  []database.Feild
+func (ci *ChainIndex) startParseLog(ctx context.Context, wg *sync.WaitGroup, cli *ethcli.ETHCli, t *model.Task) {
+	var (
+		evABI, _ = abi.JSON(strings.NewReader(t.Abi))
+		topics   []common.Hash
+	)
+	for _, v := range evABI.Events {
+		topics = append(topics, v.ID)
+	}
+	defer wg.Done()
+	for {
+		select {
+		case <-ctx.Done():
+			ci.logger.Info("ChainIndex exit")
+			return
+		default:
+			var tasks []model.Task
+			where := []database.Where{
+				{Name: "1", Value: 1},
+				{Name: "ID", Value: t.ID},
+			}
+			if err := ci.db.SelectRows("ETH_TASK", nil, where, nil, nil, &tasks); err != nil {
+				ci.logger.Error("SelectRows", zap.Error(err))
+				return
+			}
+			if len(tasks) > 0 {
+				t = &tasks[0]
+			}
+			if t.DeletedAt > 0 {
+				ci.logger.Debug("Task Deleted", zap.Uint("id", t.ID))
+				return
+			}
+			if t.Paused == 1 {
+				ci.logger.Debug("Task Paused", zap.Uint("id", t.ID))
+				time.Sleep(time.Second * 30)
+				continue
+			}
+			if t.Current < t.Start {
+				t.Current = t.Start - 1
+			}
+
+			var beginNumber = t.Current + 1
+			latest, err := cli.BlockNumber(ctx)
+			if err != nil {
+				ci.logger.Error("BlockNumber", zap.Error(err), zap.Uint("id", t.ID))
+				continue
+			}
+			var endNumber = latest
+			if endNumber < beginNumber {
+				next := time.Unix(t.UpdatedAt+t.Interval, 0)
+				ci.logger.Debug("waiting", zap.Uint64("beginNumber", beginNumber), zap.Uint64("endNumber", endNumber))
+				time.Sleep(next.Sub(time.Now()))
+				continue
+			}
+
+			if endNumber-beginNumber > 100 {
+				endNumber = beginNumber + 100
+			}
+
+			logs, err := cli.FilterLogs(context.Background(), ethereum.FilterQuery{
+				BlockHash: nil,
+				FromBlock: new(big.Int).SetUint64(beginNumber),
+				ToBlock:   new(big.Int).SetUint64(endNumber),
+				Addresses: []common.Address{common.HexToAddress(t.Contract)},
+				Topics: [][]common.Hash{
+					topics,
+				},
+			})
+			if err != nil {
+				ci.logger.Error("FilterLogs", zap.Error(err), zap.Uint("id", t.ID))
+				continue
+			}
+
+			begin := time.Now()
+			if events, err := ci.parseLogs(ctx, cli, logs, evABI, t); err != nil {
+				ci.logger.Error("parseBlock", zap.Error(err), zap.Uint("task", t.ID))
+				continue
+			} else {
+				if err := ci.db.Transaction(func(tx *sql.Tx) error {
+					for _, v := range events {
+						if _, err := ci.db.Insert(tx, v.Table, v.Cols); err != nil {
+							return err
+						}
+					}
+					if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
+						endNumber, time.Now().Unix(), t.ID); err != nil {
+						return err
+					}
+					return nil
+				}); err != nil {
+					ci.logger.Error("DB Transaction", zap.Error(err))
+					continue
+				}
+				ci.logger.Info("parseLogs", zap.Uint("task", t.ID),
+					zap.Uint64("begin", beginNumber),
+					zap.Uint64("end", endNumber),
+					zap.Int("logs", len(logs)),
+					zap.Int("events", len(events)),
+					zap.Duration("use", time.Since(begin)))
+			}
+		}
+	}
+}
+
+func (ci *ChainIndex) parseLogs(ctx context.Context, cli *ethcli.ETHCli, logs []types.Log, evABI abi.ABI, t *model.Task) ([]Event, error) {
+	var (
+		events []Event
+		txs    = make(map[common.Hash]*types.Transaction)
+		blocks = make(map[uint64]*types.Block)
+	)
+	for _, rcptLog := range logs {
+		eventAddress := rcptLog.Address.Hex()
+		if eventAddress != common.HexToAddress(t.Contract).Hex() {
+			continue
+		}
+
+		if len(rcptLog.Topics) == 0 {
+			continue
+		}
+		event, err := evABI.EventByID(rcptLog.Topics[0])
+		if err != nil {
+			continue
+		}
+		var (
+			cols   []database.Feild
+			method uint32
+		)
+
+		// get block
+		block := blocks[rcptLog.BlockNumber]
+		if block == nil {
+			if block, err = cli.BlockByNumber(ctx, new(big.Int).SetUint64(rcptLog.BlockNumber)); err != nil {
+				ci.logger.Error("BlockByNumber", zap.Error(err))
+				return nil, err
+			}
+			blocks[rcptLog.BlockNumber] = block
+		}
+
+		// get tx
+		tx := txs[rcptLog.TxHash]
+		if tx == nil {
+			if tx, _, err = cli.TransactionByHash(ctx, rcptLog.TxHash); err != nil {
+				ci.logger.Error("TransactionByHash", zap.Error(err))
+				return nil, err
+			}
+			txs[rcptLog.TxHash] = tx
+		}
+
+		if len(tx.Data()) >= 4 {
+			method = binary.BigEndian.Uint32(tx.Data()[:4])
+		}
+		{
+			cols = append(cols, database.Feild{
+				Name:  "Address",
+				Value: eventAddress,
+			})
+			cols = append(cols, database.Feild{
+				Name:  "BlockNumber",
+				Value: rcptLog.BlockNumber,
+			})
+			cols = append(cols, database.Feild{
+				Name:  "BlockHash",
+				Value: rcptLog.BlockHash.Hex(),
+			})
+			cols = append(cols, database.Feild{
+				Name:  "BlockTime",
+				Value: block.Time(),
+			})
+			cols = append(cols, database.Feild{
+				Name:  "TxHash",
+				Value: rcptLog.TxHash.Hex(),
+			})
+			cols = append(cols, database.Feild{
+				Name:  "TxIndex",
+				Value: rcptLog.TxIndex,
+			})
+			cols = append(cols, database.Feild{
+				Name:  "Method",
+				Value: method,
+			})
+		}
+
+		// 索引参数和非索引参数在旧版本solidity中可以乱序
+		var indexedParams = make(map[string]interface{})
+		var indexedArgs = make([]abi.Argument, 0)
+		for _, v := range event.Inputs {
+			if v.Indexed {
+				indexedArgs = append(indexedArgs, v)
+			}
+		}
+
+		// 索引参数
+		indexed := rcptLog.Topics[1:]
+		if len(indexed) > 0 {
+			if err := abi.ParseTopicsIntoMap(indexedParams, indexedArgs, indexed); err != nil {
+				return events, err
+			}
+			for k, v := range indexedParams {
+				if vv, ok := v.(fmt.Stringer); ok {
+					v = vv.String()
+				}
+				cols = append(cols, database.Feild{
+					Name:  k,
+					Value: v,
+				})
+			}
+		}
+
+		// 非索引参数
+		if len(rcptLog.Data) > 0 {
+			unindexed, err := event.Inputs.Unpack(rcptLog.Data)
+			if err != nil {
+				return events, errors.Wrap(err, "event.Inputs.Unpack tx:"+tx.Hash().Hex())
+			}
+
+			for i, v := range event.Inputs.NonIndexed() {
+				if vv, ok := unindexed[i].(fmt.Stringer); ok {
+					unindexed[i] = vv.String()
+				}
+				cols = append(cols, database.Feild{
+					Name:  v.Name,
+					Value: unindexed[i],
+				})
+			}
+		}
+
+		events = append(events, Event{
+			Table: t.TableName(event.Name),
+			Cols:  cols,
+		})
+	}
+
+	return events, nil
 }
 
 func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, block *types.Block, evABI abi.ABI, t *model.Task) ([]Event, error) {
@@ -352,4 +594,14 @@ func (ci *ChainIndex) parseBlock(ctx context.Context, cli *ethcli.ETHCli, block 
 		}
 	}
 	return events, nil
+}
+
+func (ci *ChainIndex) testFilterLog(ctx context.Context, cli *ethcli.ETHCli, t *model.Task) error {
+	_, err := cli.FilterLogs(ctx, ethereum.FilterQuery{
+		FromBlock: new(big.Int).SetUint64(t.Start),
+		ToBlock:   new(big.Int).SetUint64(t.Start),
+		Addresses: []common.Address{common.HexToAddress(t.Contract)},
+		Topics:    [][]common.Hash{},
+	})
+	return err
 }
