@@ -460,7 +460,8 @@ const docTemplate = `{
                 },
                 "op": {
                     "description": "can be =、\u003e、\u003c、\u003c\u003e and any operator supported by sql-database",
-                    "type": "string"
+                    "type": "string",
+                    "default": "="
                 },
                 "value": {}
             }

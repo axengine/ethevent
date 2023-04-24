@@ -155,6 +155,7 @@ definitions:
       name:
         type: string
       op:
+        default: =
         description: can be =、>、<、<> and any operator supported by sql-database
         type: string
       value: {}

@@ -46,7 +46,7 @@ type TimeRo struct {
 type Where struct {
 	Name  string      `query:"name" json:"name" validate:"omitempty"`
 	Value interface{} `query:"value" json:"value" validate:"omitempty"`
-	Op    string      `query:"op" json:"op" validate:"omitempty"` // can be =、>、<、<> and any operator supported by sql-database
+	Op    string      `query:"op" json:"op" validate:"omitempty" default:"="` // can be =、>、<、<> and any operator supported by sql-database
 }
 
 type OrderRo struct {
