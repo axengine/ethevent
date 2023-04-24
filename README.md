@@ -86,6 +86,11 @@ type EventListRo struct {
 - orderRo 排序，指定排序字段和方式
 - pageRo 当出现orderRo时pageRo必传，游标分页；单次查询最大100条数据,防止查询大量数据带来的负荷
 - wheres 指定自定义查询条件，如果len(wheres)>1，将执行union查询,此时 blockRo/timeRo/txRo 将作为公共条件；
+```
+{{A}, {B}}         matches where A union where B
+{{A, B}, {C, D}} matches where (A AND B) union where (C AND D)
+{{A, B}, {C, D}, {E, F}} matches where (A AND B) union where (C AND D) union where (E AND F)
+```
 - cols和wheres中指定字段名称时，如果是sql关键字，需要用[]括起来，例如:`[FROM]` `[TO]`
 
 ### request example
@@ -163,5 +168,5 @@ type EventListRo struct {
 }
 ```
 ```
-{"sql": "select COUNT(*) from EVENT_1_Transfer where 1 = 1 and 1 = ? ", "values": [1]}
+{"sql": "select AVG(VALUE) from EVENT_1_Transfer where 1 = 1 and 1 = ? ", "values": [1]}
 ```
