@@ -49,57 +49,6 @@ func (ci *ChainIndex) Init() error {
 	return nil
 }
 
-func (ci *ChainIndex) initTask(task *model.Task) error {
-	var tablePrefix = fmt.Sprintf("EVENT_%d_", task.ID)
-	ins, err := abi.JSON(strings.NewReader(task.Abi))
-	if err != nil {
-		return err
-	}
-
-	if err := ci.db.Transaction(func(tx *sql.Tx) error {
-		for _, v := range ins.Events {
-			tableName := tablePrefix + strings.ToUpper(v.Name)
-			var createCols []string
-			var indexCols []string
-			for _, arg := range v.Inputs {
-				var tp string
-				// todo
-				switch arg.Type.T {
-				case abi.IntTy, abi.UintTy:
-					tp = "TEXT"
-				case abi.BoolTy:
-					tp = "BOOLEAN"
-				default:
-					tp = "TEXT"
-				}
-				createCols = append(createCols, fmt.Sprintf("%s %s", "["+strings.ToUpper(arg.Name)+"]", tp))
-				if arg.Indexed {
-					indexCols = append(indexCols, fmt.Sprintf(`%s`, strings.ToUpper(arg.Name)))
-				}
-			}
-
-			ctsqls := model.CreateTableSQL(tableName, createCols)
-			if _, err := tx.Exec(ctsqls); err != nil {
-				ci.logger.Error("Exec", zap.Error(err), zap.String("sql", ctsqls))
-				return err
-			}
-
-			cisqls := model.CreateIndexSQL(tableName, indexCols)
-			for _, v := range cisqls {
-				if _, err := tx.Exec(v); err != nil {
-					ci.logger.Error("Exec", zap.Error(err), zap.String("sql", v))
-					return err
-				}
-			}
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -135,10 +84,6 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 					ci.tasks[task.ID] = &task
 					ci.mu.Unlock()
 
-					//if err := ci.initTask(&task); err != nil {
-					//	log.Logger.Error("initTask", zap.Error(err), zap.Uint("task", task.ID))
-					//	continue
-					//}
 					// 如果支持filter log则使用filter API，否则轮询区块
 					if err := ci.testFilterLog(ctx, cli, &task); err != nil {
 						ci.logger.Info("testFilterLog with err,loop blocks", zap.Error(err), zap.String("RPC", task.Rpc))
@@ -173,16 +118,15 @@ func (ci *ChainIndex) startParseBlock(ctx context.Context, wg *sync.WaitGroup, c
 				ci.logger.Error("SelectRows", zap.Error(err))
 				return
 			}
-			if len(tasks) > 0 {
-				t = &tasks[0]
-			}
-			if t.DeletedAt > 0 {
-				ci.logger.Debug("Task Deleted", zap.Uint("id", t.ID))
+			if len(tasks) == 0 {
+				ci.logger.Info("Task Removed", zap.Uint("Id", t.ID))
 				return
 			}
+			t = &tasks[0]
+
 			if t.Paused == 1 {
 				ci.logger.Debug("Task Paused", zap.Uint("id", t.ID))
-				time.Sleep(time.Second * 30)
+				time.Sleep(time.Second * 10)
 				continue
 			}
 			if t.Current < t.Start {
@@ -259,16 +203,15 @@ func (ci *ChainIndex) startParseLog(ctx context.Context, wg *sync.WaitGroup, cli
 				ci.logger.Error("SelectRows", zap.Error(err))
 				return
 			}
-			if len(tasks) > 0 {
-				t = &tasks[0]
-			}
-			if t.DeletedAt > 0 {
-				ci.logger.Debug("Task Deleted", zap.Uint("id", t.ID))
+			if len(tasks) == 0 {
+				ci.logger.Info("Task Removed", zap.Uint("Id", t.ID))
 				return
 			}
+			t = &tasks[0]
+
 			if t.Paused == 1 {
 				ci.logger.Debug("Task Paused", zap.Uint("id", t.ID))
-				time.Sleep(time.Second * 30)
+				time.Sleep(time.Second * 10)
 				continue
 			}
 			if t.Current < t.Start {

@@ -135,8 +135,18 @@ const docTemplate = `{
                 "summary": "查询任务列表",
                 "parameters": [
                     {
+                        "type": "string",
+                        "name": "contract",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "id",
                         "in": "query"
                     },
                     {
@@ -361,13 +371,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "interval": {
-                    "description": "轮询间隔，建议为区块出块间隔",
+                    "description": "轮询间隔，建议为区块出块间隔,例如：ethereum 12sec,BSC 3sec",
                     "type": "integer"
                 },
                 "rpc": {
                     "type": "string"
                 },
                 "start": {
+                    "description": "开始区块，建议是合约部署时区块号",
                     "type": "integer"
                 }
             }
@@ -393,6 +404,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "pause": {
+                    "description": "0-默认 1-暂停",
                     "type": "integer"
                 }
             }
@@ -400,36 +412,15 @@ const docTemplate = `{
         "bean.TaskUpdateRo": {
             "type": "object",
             "required": [
-                "abi",
-                "chainId",
-                "contract",
                 "id",
-                "interval",
-                "rpc",
-                "start"
+                "rpc"
             ],
             "properties": {
-                "abi": {
-                    "type": "string"
-                },
-                "chainId": {
-                    "type": "integer"
-                },
-                "contract": {
-                    "type": "string"
-                },
                 "id": {
-                    "type": "integer"
-                },
-                "interval": {
-                    "description": "轮询间隔，建议为区块出块间隔",
                     "type": "integer"
                 },
                 "rpc": {
                     "type": "string"
-                },
-                "start": {
-                    "type": "integer"
                 }
             }
         },
@@ -479,9 +470,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "current": {
-                    "type": "integer"
-                },
-                "deletedAt": {
                     "type": "integer"
                 },
                 "id": {

@@ -15,8 +15,7 @@ var CreateTaskTableSQL = `CREATE TABLE IF NOT EXISTS ETH_TASK (
     [start]   INTEGER DEFAULT (1),
     [current] INTEGER DEFAULT (1),
     [paused]   INTEGER DEFAULT (0),
-    [updatedAt] INTEGER DEFAULT (0),
-    [deletedAt] INTEGER DEFAULT (0)
+    [updatedAt] INTEGER DEFAULT (0)
 );
 `
 

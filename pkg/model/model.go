@@ -16,7 +16,6 @@ type Task struct {
 	Start     uint64 `db:"start"`
 	Current   uint64 `db:"current"`
 	Paused    uint   `db:"paused"` // 是否暂停
-	DeletedAt int64  `db:"deletedAt"`
 	UpdatedAt int64  `db:"updatedAt"`
 }
 
