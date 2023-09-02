@@ -1,7 +1,6 @@
 package http
 
 import (
-	"github.com/axengine/ethevent/pkg/errorx"
 	"github.com/axengine/ethevent/pkg/http/bean"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -22,7 +21,7 @@ func (hs *HttpServer) taskList(c echo.Context) error {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg("invalid parameter"))
 	}
 	if err := c.Validate(req); err != nil {
-		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg(err.Error()))
 	}
 	data, err := hs.svc.TaskList(c.Request().Context(), &req)
 	if err != nil {
@@ -46,7 +45,7 @@ func (hs *HttpServer) taskAdd(c echo.Context) error {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}
 	if err := c.Validate(req); err != nil {
-		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg(err.Error()))
 	}
 	taskId, err := hs.svc.TaskAdd(c.Request().Context(), &req)
 	if err != nil {
@@ -70,7 +69,7 @@ func (hs *HttpServer) taskPause(c echo.Context) error {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}
 	if err := c.Validate(req); err != nil {
-		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg(err.Error()))
 	}
 	err := hs.svc.TaskPause(c.Request().Context(), &req)
 	if err != nil {
@@ -94,7 +93,7 @@ func (hs *HttpServer) taskDelete(c echo.Context) error {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}
 	if err := c.Validate(req); err != nil {
-		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg(err.Error()))
 	}
 	err := hs.svc.TaskDelete(c.Request().Context(), &req)
 	if err != nil {
@@ -118,7 +117,7 @@ func (hs *HttpServer) taskUpdate(c echo.Context) error {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}
 	if err := c.Validate(req); err != nil {
-		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg(err.Error()))
 	}
 	err := hs.svc.TaskUpdate(c.Request().Context(), &req)
 	if err != nil {

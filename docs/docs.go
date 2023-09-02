@@ -338,13 +338,13 @@ const docTemplate = `{
         "bean.Resp": {
             "type": "object",
             "properties": {
-                "resCode": {
+                "code": {
                     "type": "integer"
                 },
-                "resDesc": {
+                "data": {},
+                "msg": {
                     "type": "string"
                 },
-                "result": {},
                 "traceId": {
                     "type": "string"
                 }

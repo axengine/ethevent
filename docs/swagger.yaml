@@ -65,11 +65,11 @@ definitions:
     type: object
   bean.Resp:
     properties:
-      resCode:
+      code:
         type: integer
-      resDesc:
+      data: {}
+      msg:
         type: string
-      result: {}
       traceId:
         type: string
     type: object

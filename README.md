@@ -26,7 +26,7 @@ curl 'http://localhost:8080/v1/task/add' \
 	-X POST \
 	-d '{"abi":"[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"}]","chainId":56,"contract":"0x55d398326f99059fF775485246999027B3197955","interval":3,"rpc":"https://bsc-dataseed1.ninicoin.io/","start":26800040}'
 
-{"resCode":0,"resDesc":"ok","result":1}
+{"code":0,"msg":"ok","data":1}
 ```
 
 - List event logs:查询任务Id为`1`的`Transfer`事件，分页采用游标，默认倒序，更多参数查看swag文档

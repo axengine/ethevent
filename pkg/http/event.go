@@ -1,7 +1,6 @@
 package http
 
 import (
-	"github.com/axengine/ethevent/pkg/errorx"
 	"github.com/axengine/ethevent/pkg/http/bean"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -22,10 +21,10 @@ func (hs *HttpServer) eventList(c echo.Context) error {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg("invalid parameter"))
 	}
 	if err := c.Validate(req); err != nil {
-		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg(err.Error()))
 	}
 	if req.OrderRo != nil && req.PageRo == nil {
-		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiMsg("need pageRo")))
+		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg("pageRo Required"))
 	}
 	data, err := hs.svc.EventList(c.Request().Context(), &req)
 	if err != nil {

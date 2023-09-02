@@ -11,39 +11,39 @@ import (
 
 // Resp http resp
 type Resp struct {
-	ResCode int         `json:"resCode"`
-	ResDesc string      `json:"resDesc"`
-	Result  interface{} `json:"result"`
+	Code    int         `json:"code"`
+	Msg     string      `json:"msg"`
+	Data    interface{} `json:"data"`
 	TraceId string      `json:"traceId,omitempty"`
 }
 
 // ResultPage result with page info
 type ResultPage struct {
-	Content interface{} `json:"content"`
-	Total   int64       `json:"total"`
+	Items interface{} `json:"items"`
+	Total int64       `json:"total"`
 }
 
 // Success display successful signal
 func (r *Resp) Success(result interface{}) *Resp {
-	r.ResCode = 0
-	r.ResDesc = "ok"
-	r.Result = result
+	r.Code = 0
+	r.Msg = "ok"
+	r.Data = result
 	return r
 }
 
-// Success display successful result with page info
+// SuccessPage display successful result with page info
 func (r *Resp) SuccessPage(content interface{}, total int64) *Resp {
-	r.ResCode = 0
-	r.ResDesc = "ok"
-	r.Result = ResultPage{content, total}
+	r.Code = 0
+	r.Msg = "ok"
+	r.Data = ResultPage{content, total}
 	return r
 }
 
 // Fail display fail signal
 func (r *Resp) Fail(code int, desc string, result interface{}) *Resp {
-	r.ResCode = code
-	r.ResDesc = desc
-	r.Result = result
+	r.Code = code
+	r.Msg = desc
+	r.Data = result
 	return r
 }
 
@@ -77,8 +77,8 @@ func (r *Resp) FailErr(c echo.Context, err error) *Resp {
 		}
 	}
 
-	r.ResCode = code
-	r.ResDesc = msg
+	r.Code = code
+	r.Msg = msg
 	return r
 }
 
