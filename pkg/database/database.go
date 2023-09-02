@@ -342,7 +342,6 @@ func (dbo *DBO) SelectRows(table string, cols []string, where []Where, order *Or
 	}
 
 	//dbo.logger.Debug("SelectRows", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
-
 	return dbo.conn.Select(result, sqlBuff.String(), values...)
 }
 

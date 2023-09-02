@@ -14,15 +14,18 @@ import (
 // @Tags TASK
 // @Accept json
 // @Produce json
-// @Param Request query bean.PageRo true "request param"
+// @Param Request query bean.TaskListRo true "request param"
 // @Success 200 {array} model.Task "success"
 // @Router /v1/task/list [GET]
 func (hs *HttpServer) taskList(c echo.Context) error {
-	var req bean.PageRo
+	var req bean.TaskListRo
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailMsg("invalid parameter"))
 	}
-	data, err := hs.svc.TaskList(req.Cursor, req.Limit, "ASC")
+	if err := c.Validate(req); err != nil {
+		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
+	}
+	data, err := hs.svc.TaskList(&req)
 	if err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}

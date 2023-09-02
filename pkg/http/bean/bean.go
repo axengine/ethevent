@@ -1,5 +1,11 @@
 package bean
 
+type TaskListRo struct {
+	PageRo
+	Id       uint   `query:"id" validate:"omitempty,gt=0"`
+	Contract string `query:"contract" validate:"omitempty,len=42,startswith=0x"`
+}
+
 type PageRo struct {
 	Cursor uint64 `query:"cursor" validate:"omitempty"`
 	Limit  uint64 `query:"limit" validate:"required,lte=100,gte=1"`
@@ -10,13 +16,15 @@ type TaskAddRo struct {
 	Abi      string `query:"abi" validate:"required"`
 	ChainId  uint64 `query:"chainId" validate:"required,gt=0"`
 	Rpc      string `query:"rpc" validate:"required"`
-	Start    uint64 `query:"start" validate:"required,gt=0"`
-	// 轮询间隔，建议为区块出块间隔
+	// 开始区块，建议是合约部署时区块号
+	Start uint64 `query:"start" validate:"required,gt=0"`
+	// 轮询间隔，建议为区块出块间隔,例如：ethereum 12sec,BSC 3sec
 	Interval uint64 `query:"interval" validate:"required,gt=0"`
 }
 
 type TaskPauseRo struct {
-	Id    uint `json:"id" validate:"required,gt=0"`
+	Id uint `json:"id" validate:"required,gt=0"`
+	// 0-默认 1-暂停
 	Pause uint `json:"pause" validate:"omitempty"`
 }
 
@@ -25,8 +33,8 @@ type TaskDeleteRo struct {
 }
 
 type TaskUpdateRo struct {
-	Id uint `json:"id" validate:"required,gt=0"`
-	TaskAddRo
+	Id  uint   `json:"id" validate:"required,gt=0"`
+	Rpc string `query:"rpc" validate:"required"`
 }
 
 type BlockRo struct {

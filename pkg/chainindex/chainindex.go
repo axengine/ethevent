@@ -55,40 +55,46 @@ func (ci *ChainIndex) initTask(task *model.Task) error {
 	if err != nil {
 		return err
 	}
-	for _, v := range ins.Events {
-		tableName := tablePrefix + strings.ToUpper(v.Name)
-		var createCols []string
-		var indexCols []string
-		for _, arg := range v.Inputs {
-			var tp string
-			// todo
-			switch arg.Type.T {
-			case abi.IntTy, abi.UintTy:
-				tp = "TEXT"
-			case abi.BoolTy:
-				tp = "BOOLEAN"
-			default:
-				tp = "TEXT"
-			}
-			createCols = append(createCols, fmt.Sprintf("%s %s", "["+strings.ToUpper(arg.Name)+"]", tp))
-			if arg.Indexed {
-				indexCols = append(indexCols, fmt.Sprintf(`%s`, strings.ToUpper(arg.Name)))
-			}
-		}
 
-		ctsqls := model.CreateTableSQL(tableName, createCols)
-		if _, err := ci.db.Exec(nil, ctsqls); err != nil {
-			ci.logger.Error("Exec", zap.Error(err), zap.String("sql", ctsqls))
-			return err
-		}
+	if err := ci.db.Transaction(func(tx *sql.Tx) error {
+		for _, v := range ins.Events {
+			tableName := tablePrefix + strings.ToUpper(v.Name)
+			var createCols []string
+			var indexCols []string
+			for _, arg := range v.Inputs {
+				var tp string
+				// todo
+				switch arg.Type.T {
+				case abi.IntTy, abi.UintTy:
+					tp = "TEXT"
+				case abi.BoolTy:
+					tp = "BOOLEAN"
+				default:
+					tp = "TEXT"
+				}
+				createCols = append(createCols, fmt.Sprintf("%s %s", "["+strings.ToUpper(arg.Name)+"]", tp))
+				if arg.Indexed {
+					indexCols = append(indexCols, fmt.Sprintf(`%s`, strings.ToUpper(arg.Name)))
+				}
+			}
 
-		cisqls := model.CreateIndexSQL(tableName, indexCols)
-		for _, v := range cisqls {
-			if _, err := ci.db.Exec(nil, v); err != nil {
-				ci.logger.Error("Exec", zap.Error(err), zap.String("sql", v))
+			ctsqls := model.CreateTableSQL(tableName, createCols)
+			if _, err := tx.Exec(ctsqls); err != nil {
+				ci.logger.Error("Exec", zap.Error(err), zap.String("sql", ctsqls))
 				return err
 			}
+
+			cisqls := model.CreateIndexSQL(tableName, indexCols)
+			for _, v := range cisqls {
+				if _, err := tx.Exec(v); err != nil {
+					ci.logger.Error("Exec", zap.Error(err), zap.String("sql", v))
+					return err
+				}
+			}
 		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	return nil
@@ -129,10 +135,10 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 					ci.tasks[task.ID] = &task
 					ci.mu.Unlock()
 
-					if err := ci.initTask(&task); err != nil {
-						log.Logger.Error("initTask", zap.Error(err), zap.Uint("task", task.ID))
-						continue
-					}
+					//if err := ci.initTask(&task); err != nil {
+					//	log.Logger.Error("initTask", zap.Error(err), zap.Uint("task", task.ID))
+					//	continue
+					//}
 					// 如果支持filter log则使用filter API，否则轮询区块
 					if err := ci.testFilterLog(ctx, cli, &task); err != nil {
 						ci.logger.Info("testFilterLog with err,loop blocks", zap.Error(err), zap.String("RPC", task.Rpc))
