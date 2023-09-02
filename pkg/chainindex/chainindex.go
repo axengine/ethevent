@@ -41,7 +41,7 @@ func New(logger *zap.Logger, db *database.DBO) *ChainIndex {
 // Init initial table and index
 func (ci *ChainIndex) Init() error {
 	// create table TASK
-	if _, err := ci.db.Exec(nil, model.CreateTaskTableSQL); err != nil {
+	if _, err := ci.db.Exec(context.Background(), nil, model.CreateTaskTableSQL); err != nil {
 		ci.logger.Error("Exec", zap.Error(err), zap.String("sql", model.CreateTaskTableSQL))
 		return err
 	}
@@ -61,7 +61,7 @@ func (ci *ChainIndex) Start(ctx context.Context, wg *sync.WaitGroup) {
 		case <-tm.C:
 			var tasks []model.Task
 			where := []database.Where{{Name: "1", Value: 1}}
-			if err := ci.db.SelectRows("ETH_TASK", nil, where, nil, nil, &tasks); err != nil {
+			if err := ci.db.SelectRows(ctx, "ETH_TASK", nil, where, nil, nil, &tasks); err != nil {
 				log.Logger.Error("SelectRows", zap.Error(err))
 				return
 			}
@@ -114,7 +114,7 @@ func (ci *ChainIndex) startParseBlock(ctx context.Context, wg *sync.WaitGroup, c
 				{Name: "1", Value: 1},
 				{Name: "ID", Value: t.ID},
 			}
-			if err := ci.db.SelectRows("ETH_TASK", nil, where, nil, nil, &tasks); err != nil {
+			if err := ci.db.SelectRows(ctx, "ETH_TASK", nil, where, nil, nil, &tasks); err != nil {
 				ci.logger.Error("SelectRows", zap.Error(err))
 				return
 			}
@@ -156,11 +156,11 @@ func (ci *ChainIndex) startParseBlock(ctx context.Context, wg *sync.WaitGroup, c
 			} else {
 				if err := ci.db.Transaction(func(tx *sql.Tx) error {
 					for _, v := range events {
-						if _, err := ci.db.Insert(tx, v.Table, v.Cols); err != nil {
+						if _, err := ci.db.Insert(ctx, tx, v.Table, v.Cols); err != nil {
 							return err
 						}
 					}
-					if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
+					if _, err := tx.ExecContext(ctx, "UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
 						parseBlock, time.Now().Unix(), t.ID); err != nil {
 						return err
 					}
@@ -199,7 +199,7 @@ func (ci *ChainIndex) startParseLog(ctx context.Context, wg *sync.WaitGroup, cli
 				{Name: "1", Value: 1},
 				{Name: "ID", Value: t.ID},
 			}
-			if err := ci.db.SelectRows("ETH_TASK", nil, where, nil, nil, &tasks); err != nil {
+			if err := ci.db.SelectRows(ctx, "ETH_TASK", nil, where, nil, nil, &tasks); err != nil {
 				ci.logger.Error("SelectRows", zap.Error(err))
 				return
 			}
@@ -265,11 +265,11 @@ func (ci *ChainIndex) startParseLog(ctx context.Context, wg *sync.WaitGroup, cli
 			} else {
 				if err := ci.db.Transaction(func(tx *sql.Tx) error {
 					for _, v := range events {
-						if _, err := ci.db.Insert(tx, v.Table, v.Cols); err != nil {
+						if _, err := ci.db.Insert(ctx, tx, v.Table, v.Cols); err != nil {
 							return err
 						}
 					}
-					if _, err := tx.Exec("UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
+					if _, err := tx.ExecContext(ctx, "UPDATE ETH_TASK SET CURRENT=? ,UpdatedAt=? WHERE ID=?",
 						endNumber, time.Now().Unix(), t.ID); err != nil {
 						return err
 					}

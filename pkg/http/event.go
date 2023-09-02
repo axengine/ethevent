@@ -27,7 +27,7 @@ func (hs *HttpServer) eventList(c echo.Context) error {
 	if req.OrderRo != nil && req.PageRo == nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiMsg("need pageRo")))
 	}
-	data, err := hs.svc.EventList(&req)
+	data, err := hs.svc.EventList(c.Request().Context(), &req)
 	if err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}

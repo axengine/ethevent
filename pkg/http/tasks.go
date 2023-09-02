@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"github.com/axengine/ethevent/pkg/errorx"
 	"github.com/axengine/ethevent/pkg/http/bean"
 	"github.com/labstack/echo/v4"
@@ -25,7 +24,7 @@ func (hs *HttpServer) taskList(c echo.Context) error {
 	if err := c.Validate(req); err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
 	}
-	data, err := hs.svc.TaskList(&req)
+	data, err := hs.svc.TaskList(c.Request().Context(), &req)
 	if err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}
@@ -49,7 +48,7 @@ func (hs *HttpServer) taskAdd(c echo.Context) error {
 	if err := c.Validate(req); err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
 	}
-	taskId, err := hs.svc.TaskAdd(context.Background(), &req)
+	taskId, err := hs.svc.TaskAdd(c.Request().Context(), &req)
 	if err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}
@@ -73,7 +72,7 @@ func (hs *HttpServer) taskPause(c echo.Context) error {
 	if err := c.Validate(req); err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
 	}
-	err := hs.svc.TaskPause(context.Background(), &req)
+	err := hs.svc.TaskPause(c.Request().Context(), &req)
 	if err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}
@@ -97,7 +96,7 @@ func (hs *HttpServer) taskDelete(c echo.Context) error {
 	if err := c.Validate(req); err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
 	}
-	err := hs.svc.TaskDelete(context.Background(), &req)
+	err := hs.svc.TaskDelete(c.Request().Context(), &req)
 	if err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}
@@ -121,7 +120,7 @@ func (hs *HttpServer) taskUpdate(c echo.Context) error {
 	if err := c.Validate(req); err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, errorx.ErrParamInvalid.MultiErr(err)))
 	}
-	err := hs.svc.TaskUpdate(context.Background(), &req)
+	err := hs.svc.TaskUpdate(c.Request().Context(), &req)
 	if err != nil {
 		return c.JSON(http.StatusOK, new(bean.Resp).FailErr(c, err))
 	}

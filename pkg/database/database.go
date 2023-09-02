@@ -2,6 +2,7 @@ package database
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -49,22 +50,22 @@ func (dbo *DBO) Transaction(fn func(tx *sql.Tx) error) error {
 	return tx.Commit()
 }
 
-func (dbo *DBO) Exec(tx *sql.Tx, query string, args ...any) (sql.Result, error) {
+func (dbo *DBO) Exec(ctx context.Context, tx *sql.Tx, query string, args ...any) (sql.Result, error) {
 	if tx != nil {
 		if len(args) == 0 {
-			return tx.Exec(query)
+			return tx.ExecContext(ctx, query)
 		}
-		return tx.Exec(query, args)
+		return tx.ExecContext(ctx, query, args)
 	}
 	dbo.logger.Debug("Exec", zap.String("query", query), zap.Any("args", args))
 
 	if len(args) == 0 {
-		return dbo.conn.Exec(query)
+		return dbo.conn.ExecContext(ctx, query)
 	}
-	return dbo.conn.Exec(query, args)
+	return dbo.conn.ExecContext(ctx, query, args)
 }
 
-func (dbo *DBO) Insert(tx *sql.Tx, table string, fields []Feild) (sql.Result, error) {
+func (dbo *DBO) Insert(ctx context.Context, tx *sql.Tx, table string, fields []Feild) (sql.Result, error) {
 	if table == "" || len(fields) == 0 {
 		return nil, errors.New("nothing to insert")
 	}
@@ -92,13 +93,13 @@ func (dbo *DBO) Insert(tx *sql.Tx, table string, fields []Feild) (sql.Result, er
 	dbo.logger.Debug("Insert", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
 	if tx != nil {
-		return tx.Exec(sqlBuff.String(), values...)
+		return tx.ExecContext(ctx, sqlBuff.String(), values...)
 	}
-	return dbo.conn.Exec(sqlBuff.String(), values...)
+	return dbo.conn.ExecContext(ctx, sqlBuff.String(), values...)
 }
 
 // Delete delete records
-func (dbo *DBO) Delete(tx *sql.Tx, table string, where []Where) (sql.Result, error) {
+func (dbo *DBO) Delete(ctx context.Context, tx *sql.Tx, table string, where []Where) (sql.Result, error) {
 	if table == "" {
 		return nil, errors.New("table name is required")
 	}
@@ -123,16 +124,16 @@ func (dbo *DBO) Delete(tx *sql.Tx, table string, where []Where) (sql.Result, err
 	var res sql.Result
 	var err error
 	if tx != nil {
-		res, err = tx.Exec(sqlBuff.String(), values...)
+		res, err = tx.ExecContext(ctx, sqlBuff.String(), values...)
 	} else {
-		res, err = dbo.conn.Exec(sqlBuff.String(), values...)
+		res, err = dbo.conn.ExecContext(ctx, sqlBuff.String(), values...)
 	}
 
 	return res, err
 }
 
 // Update update records
-func (dbo *DBO) Update(tx *sql.Tx, table string, toupdate []Feild, where []Where) (sql.Result, error) {
+func (dbo *DBO) Update(ctx context.Context, tx *sql.Tx, table string, toupdate []Feild, where []Where) (sql.Result, error) {
 	if table == "" {
 		return nil, errors.New("table name is required")
 	}
@@ -168,15 +169,15 @@ func (dbo *DBO) Update(tx *sql.Tx, table string, toupdate []Feild, where []Where
 	var res sql.Result
 	var err error
 	if tx != nil {
-		res, err = tx.Exec(sqlBuff.String(), values...)
+		res, err = tx.ExecContext(ctx, sqlBuff.String(), values...)
 	} else {
-		res, err = dbo.conn.Exec(sqlBuff.String(), values...)
+		res, err = dbo.conn.ExecContext(ctx, sqlBuff.String(), values...)
 	}
 
 	return res, err
 }
 
-func (dbo *DBO) SelectRowsUnion(table string, cols []string, wheres [][]Where, order *Order, paging *Paging, result interface{}) error {
+func (dbo *DBO) SelectRowsUnion(ctx context.Context, table string, cols []string, wheres [][]Where, order *Order, paging *Paging, result interface{}) error {
 	if table == "" {
 		return errors.New("table name is required")
 	}
@@ -227,10 +228,10 @@ func (dbo *DBO) SelectRowsUnion(table string, cols []string, wheres [][]Where, o
 	}
 	dbo.logger.Debug("SelectRowsUnion", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
-	return dbo.conn.Select(result, sqlBuff.String(), values...)
+	return dbo.conn.SelectContext(ctx, result, sqlBuff.String(), values...)
 }
 
-func (dbo *DBO) SelectRowsUnionToMaps(table string, cols []string, wheres [][]Where, order *Order, paging *Paging) ([]map[string]interface{}, error) {
+func (dbo *DBO) SelectRowsUnionToMaps(ctx context.Context, table string, cols []string, wheres [][]Where, order *Order, paging *Paging) ([]map[string]interface{}, error) {
 	if table == "" {
 		return nil, errors.New("table name is required")
 	}
@@ -277,7 +278,7 @@ func (dbo *DBO) SelectRowsUnionToMaps(table string, cols []string, wheres [][]Wh
 	}
 	dbo.logger.Debug("SelectRowsUnionToMaps", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
-	rows, err := dbo.conn.Queryx(sqlBuff.String(), values...)
+	rows, err := dbo.conn.QueryxContext(ctx, sqlBuff.String(), values...)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +295,7 @@ func (dbo *DBO) SelectRowsUnionToMaps(table string, cols []string, wheres [][]Wh
 }
 
 // SelectRows select rows to struct slice
-func (dbo *DBO) SelectRows(table string, cols []string, where []Where, order *Order, paging *Paging, result interface{}) error {
+func (dbo *DBO) SelectRows(ctx context.Context, table string, cols []string, where []Where, order *Order, paging *Paging, result interface{}) error {
 	if table == "" {
 		return errors.New("table name is required")
 	}
@@ -342,11 +343,11 @@ func (dbo *DBO) SelectRows(table string, cols []string, where []Where, order *Or
 	}
 
 	//dbo.logger.Debug("SelectRows", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
-	return dbo.conn.Select(result, sqlBuff.String(), values...)
+	return dbo.conn.SelectContext(ctx, result, sqlBuff.String(), values...)
 }
 
 // SelectRowsToMaps select rows to map slice
-func (dbo *DBO) SelectRowsToMaps(table string, cols []string, where []Where, order *Order, paging *Paging) ([]map[string]interface{}, error) {
+func (dbo *DBO) SelectRowsToMaps(ctx context.Context, table string, cols []string, where []Where, order *Order, paging *Paging) ([]map[string]interface{}, error) {
 	if table == "" {
 		return nil, errors.New("table name is required")
 	}
@@ -395,7 +396,7 @@ func (dbo *DBO) SelectRowsToMaps(table string, cols []string, where []Where, ord
 
 	//dbo.logger.Debug("SelectRowsToMaps", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
-	rows, err := dbo.conn.Queryx(sqlBuff.String(), values...)
+	rows, err := dbo.conn.QueryxContext(ctx, sqlBuff.String(), values...)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +413,7 @@ func (dbo *DBO) SelectRowsToMaps(table string, cols []string, where []Where, ord
 }
 
 // SelectRowsOffset select rows to struct slice
-func (dbo *DBO) SelectRowsOffset(table string, cols []string, where []Where, order *Order, offset, limit uint64, result interface{}) error {
+func (dbo *DBO) SelectRowsOffset(ctx context.Context, table string, cols []string, where []Where, order *Order, offset, limit uint64, result interface{}) error {
 	if table == "" {
 		return errors.New("table name is required")
 	}
@@ -452,27 +453,27 @@ func (dbo *DBO) SelectRowsOffset(table string, cols []string, where []Where, ord
 	dbo.logger.Debug("SelectRowsOffset", zap.String("sql", sqlBuff.String()), zap.Any("values", values))
 
 	// execute
-	return dbo.conn.Select(result, sqlBuff.String(), values...)
+	return dbo.conn.SelectContext(ctx, result, sqlBuff.String(), values...)
 }
 
 // SelectRawSQL query useing raw sql
-func (dbo *DBO) SelectRawSQL(table string, sqlStr string, values []interface{}, result interface{}) error {
+func (dbo *DBO) SelectRawSQL(ctx context.Context, table string, sqlStr string, values []interface{}, result interface{}) error {
 	if table == "" {
 		return errors.New("table name is required")
 	}
 	dbo.logger.Debug("selectRawSQL", zap.String("sql", sqlStr), zap.Any("values", values))
-	return dbo.conn.Select(result, sqlStr, values...)
+	return dbo.conn.SelectContext(ctx, result, sqlStr, values...)
 }
 
-func (dbo *DBO) Excute(stmt *sql.Stmt, fields []Feild) (sql.Result, error) {
+func (dbo *DBO) Excute(ctx context.Context, stmt *sql.Stmt, fields []Feild) (sql.Result, error) {
 	values := make([]interface{}, len(fields))
 	for i, v := range fields {
 		values[i] = v.Value
 	}
-	return stmt.Exec(values...)
+	return stmt.ExecContext(ctx, values...)
 }
 
-func (dbo *DBO) Prepare(tx *sql.Tx, table string, fields []Feild) (*sql.Stmt, error) {
+func (dbo *DBO) Prepare(ctx context.Context, tx *sql.Tx, table string, fields []Feild) (*sql.Stmt, error) {
 	var sqlBuff bytes.Buffer
 	sqlBuff.WriteString(fmt.Sprintf("insert into %s (", table))
 	for i := 0; i < len(fields)-1; i++ {
@@ -486,8 +487,8 @@ func (dbo *DBO) Prepare(tx *sql.Tx, table string, fields []Feild) (*sql.Stmt, er
 	sqlBuff.WriteString(fmt.Sprintf("?);"))
 	dbo.logger.Debug("Prepare", zap.String("sql", sqlBuff.String()))
 	if tx != nil {
-		return tx.Prepare(sqlBuff.String())
+		return tx.PrepareContext(ctx, sqlBuff.String())
 	} else {
-		return dbo.conn.Prepare(sqlBuff.String())
+		return dbo.conn.PrepareContext(ctx, sqlBuff.String())
 	}
 }

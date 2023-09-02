@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/axengine/ethevent/pkg/database"
@@ -51,7 +52,7 @@ func TestValueDecimal(t *testing.T) {
 		Value: "0x18307a4fa2a6966dc8fbabea36fbac5dddc6cd1f7b6c8cb8bb1a6e2a170b4a57",
 		Op:    "=",
 	}})
-	out, err := tSVC.EventList(evReq)
+	out, err := tSVC.EventList(context.Background(), evReq)
 	if err != nil {
 		t.Fatal(err)
 	}

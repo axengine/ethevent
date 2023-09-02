@@ -23,7 +23,7 @@ func New(logger *zap.Logger, db *database.DBO) *Service {
 	return &Service{logger: logger, db: db}
 }
 
-func (svc *Service) TaskList(req *bean.TaskListRo) ([]model.Task, error) {
+func (svc *Service) TaskList(ctx context.Context, req *bean.TaskListRo) ([]model.Task, error) {
 	var datas []model.Task
 	where := []database.Where{
 		database.Where{Name: "1", Value: 1},
@@ -39,7 +39,7 @@ func (svc *Service) TaskList(req *bean.TaskListRo) ([]model.Task, error) {
 		return nil, err
 	}
 	p := database.MakePaging("id", req.Cursor, req.Limit)
-	if err := svc.db.SelectRows("ETH_TASK", nil, where, o, p, &datas); err != nil {
+	if err := svc.db.SelectRows(ctx, "ETH_TASK", nil, where, o, p, &datas); err != nil {
 		return nil, err
 	}
 	return datas, nil
@@ -62,12 +62,12 @@ func (svc *Service) TaskAdd(ctx context.Context, req *bean.TaskAddRo) (int64, er
 
 	var taskId int64
 	err := svc.db.Transaction(func(tx *sql.Tx) error {
-		result, err := svc.db.Insert(tx, "ETH_TASK", fields)
+		result, err := svc.db.Insert(ctx, tx, "ETH_TASK", fields)
 		if err != nil {
 			return err
 		}
 		taskId, _ = result.LastInsertId()
-		return svc.initTask(tx, uint(taskId), req.Abi)
+		return svc.initTask(ctx, tx, uint(taskId), req.Abi)
 	})
 	if err != nil {
 		return 0, err
@@ -84,7 +84,7 @@ func (svc *Service) TaskUpdate(ctx context.Context, req *bean.TaskUpdateRo) erro
 		database.Feild{Name: "rpc", Value: req.Rpc},
 	}
 
-	_, err := svc.db.Update(nil, "ETH_TASK", fields, where)
+	_, err := svc.db.Update(ctx, nil, "ETH_TASK", fields, where)
 	return err
 }
 
@@ -92,7 +92,7 @@ func (svc *Service) TaskPause(ctx context.Context, req *bean.TaskPauseRo) error 
 	where := []database.Where{
 		database.Where{Name: "id", Value: req.Id},
 	}
-	_, err := svc.db.Update(nil, "ETH_TASK", []database.Feild{
+	_, err := svc.db.Update(ctx, nil, "ETH_TASK", []database.Feild{
 		database.Feild{
 			Name:  "paused",
 			Value: req.Pause,
@@ -102,7 +102,7 @@ func (svc *Service) TaskPause(ctx context.Context, req *bean.TaskPauseRo) error 
 }
 
 func (svc *Service) TaskDelete(ctx context.Context, req *bean.TaskDeleteRo) error {
-	task, err := svc.findTaskById(req.Id)
+	task, err := svc.findTaskById(ctx, req.Id)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (svc *Service) TaskDelete(ctx context.Context, req *bean.TaskDeleteRo) erro
 	err = svc.db.Transaction(func(tx *sql.Tx) error {
 		for _, v := range ins.Events {
 			tableName := tablePrefix + strings.ToUpper(v.Name)
-			if _, err := svc.db.Exec(tx, fmt.Sprintf("DROP TABLE %s", tableName)); err != nil {
+			if _, err := svc.db.Exec(ctx, tx, fmt.Sprintf("DROP TABLE %s", tableName)); err != nil {
 				return err
 			}
 		}
@@ -127,7 +127,7 @@ func (svc *Service) TaskDelete(ctx context.Context, req *bean.TaskDeleteRo) erro
 		where := []database.Where{
 			database.Where{Name: "id", Value: req.Id},
 		}
-		if _, err := svc.db.Delete(tx, "ETH_TASK", where); err != nil {
+		if _, err := svc.db.Delete(ctx, tx, "ETH_TASK", where); err != nil {
 			return err
 		}
 
@@ -136,7 +136,7 @@ func (svc *Service) TaskDelete(ctx context.Context, req *bean.TaskDeleteRo) erro
 	return err
 }
 
-func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, error) {
+func (svc *Service) EventList(ctx context.Context, req *bean.EventListRo) ([]map[string]interface{}, error) {
 	var (
 		err       error
 		tableName = fmt.Sprintf("EVENT_%d_%s", req.TaskId, req.Event)
@@ -216,16 +216,16 @@ func (svc *Service) EventList(req *bean.EventListRo) ([]map[string]interface{}, 
 		paging = database.MakePaging("ID", req.PageRo.Cursor, req.PageRo.Limit)
 	}
 
-	return svc.db.SelectRowsUnionToMaps(tableName, req.Cols, wheres, orderT, paging)
+	return svc.db.SelectRowsUnionToMaps(ctx, tableName, req.Cols, wheres, orderT, paging)
 }
 
-func (svc *Service) findTaskByContract(contract string) (*model.Task, error) {
+func (svc *Service) findTaskByContract(ctx context.Context, contract string) (*model.Task, error) {
 	var datas []model.Task
 	where := []database.Where{
 		database.Where{Name: "Contract", Value: contract},
 	}
 
-	if err := svc.db.SelectRows("ETH_TASK", nil, where, nil, nil, &datas); err != nil {
+	if err := svc.db.SelectRows(ctx, "ETH_TASK", nil, where, nil, nil, &datas); err != nil {
 		return nil, err
 	}
 	if len(datas) > 0 {
@@ -234,13 +234,13 @@ func (svc *Service) findTaskByContract(contract string) (*model.Task, error) {
 	return nil, nil
 }
 
-func (svc *Service) findTaskById(id uint) (*model.Task, error) {
+func (svc *Service) findTaskById(ctx context.Context, id uint) (*model.Task, error) {
 	var datas []model.Task
 	where := []database.Where{
 		database.Where{Name: "ID", Value: id},
 	}
 
-	if err := svc.db.SelectRows("ETH_TASK", nil, where, nil, nil, &datas); err != nil {
+	if err := svc.db.SelectRows(ctx, "ETH_TASK", nil, where, nil, nil, &datas); err != nil {
 		return nil, err
 	}
 	if len(datas) > 0 {
@@ -249,7 +249,7 @@ func (svc *Service) findTaskById(id uint) (*model.Task, error) {
 	return nil, nil
 }
 
-func (svc *Service) initTask(tx *sql.Tx, taskId uint, taskABIJson string) error {
+func (svc *Service) initTask(ctx context.Context, tx *sql.Tx, taskId uint, taskABIJson string) error {
 	var tablePrefix = fmt.Sprintf("EVENT_%d_", taskId)
 	ins, err := abi.JSON(strings.NewReader(taskABIJson))
 	if err != nil {
@@ -278,14 +278,14 @@ func (svc *Service) initTask(tx *sql.Tx, taskId uint, taskABIJson string) error 
 		}
 
 		ctsqls := model.CreateTableSQL(tableName, createCols)
-		if _, err := tx.Exec(ctsqls); err != nil {
+		if _, err := tx.ExecContext(ctx, ctsqls); err != nil {
 			svc.logger.Error("Exec", zap.Error(err), zap.String("sql", ctsqls))
 			return err
 		}
 
 		cisqls := model.CreateIndexSQL(tableName, indexCols)
 		for _, v := range cisqls {
-			if _, err := tx.Exec(v); err != nil {
+			if _, err := tx.ExecContext(ctx, v); err != nil {
 				svc.logger.Error("Exec", zap.Error(err), zap.String("sql", v))
 				return err
 			}
